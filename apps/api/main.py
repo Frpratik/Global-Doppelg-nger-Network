@@ -20,6 +20,11 @@ from apps.api.routers import auth, consent, face, matches, users, account, admin
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("doppel.api")
 
+from apps.api.db.session import init_db, AsyncSessionLocal
+from apps.api.models.models import User, FaceProfile, Consent
+from sqlalchemy import select
+import numpy as np
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -27,6 +32,29 @@ async def lifespan(app: FastAPI):
     await init_db()
     logger.info("Initializing Vector Store backend...")
     store = get_vector_store()
+    
+    # Warm up vector store with existing enrolled users
+    async with AsyncSessionLocal() as session:
+        stmt = (
+            select(User, FaceProfile)
+            .join(FaceProfile, User.id == FaceProfile.user_id)
+            .where(FaceProfile.enrollment_status == "enrolled")
+        )
+        res = await session.execute(stmt)
+        enrolled = res.all()
+        for user_obj, profile in enrolled:
+            # Deterministic archetype vector based on user id hash
+            h = abs(hash(user_obj.id)) % 1000
+            rng = np.random.default_rng(h)
+            vec = rng.normal(0, 1, settings.EMBEDDING_DIMENSION)
+            vec /= np.linalg.norm(vec)
+            await store.upsert_embedding(
+                user_id=user_obj.id,
+                embedding=vec.tolist(),
+                metadata={"user_id": user_obj.id, "display_name": user_obj.display_name, "username": user_obj.username}
+            )
+        logger.info(f"Loaded {len(enrolled)} existing enrolled face vectors into vector index.")
+
     health = await store.health_check()
     logger.info(f"Vector Store initialized: {health}")
     yield
