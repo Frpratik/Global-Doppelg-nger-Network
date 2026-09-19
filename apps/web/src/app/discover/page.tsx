@@ -38,7 +38,7 @@ export default function DiscoverPage() {
     const stepTimer2 = setTimeout(() => setScanStep(3), 1300);
 
     try {
-      const data = await MatchingService.search(10, 0.50);
+      const data = await MatchingService.search(10, 0.15);
       setTimeout(() => {
         setSessionData(data);
         setSearching(false);

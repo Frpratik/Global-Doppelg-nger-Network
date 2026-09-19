@@ -174,6 +174,7 @@ class MatchingEngine:
         # Record top matches in DB
         for m in match_items:
             db_match = Match(
+                id=m.match_id,
                 requester_id=requester_id,
                 matched_user_id=m.matched_user_id,
                 similarity_score=m.similarity_score,
