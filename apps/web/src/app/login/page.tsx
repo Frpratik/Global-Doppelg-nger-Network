@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { ApiClient } from "@/lib/api";
+import { AuthService } from "@/services/auth.service";
 import { Fingerprint, Lock, Mail, ArrowRight, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
@@ -21,7 +21,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await ApiClient.login({
+      const res = await AuthService.login({
         email: email.trim(),
         password,
       });
@@ -36,54 +36,54 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-radial-gradient">
-      <div className="max-w-md w-full glass-panel rounded-3xl p-8 border border-cyan-500/20 relative shadow-2xl">
+    <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full surface-card rounded-2xl p-8 border border-surface-border relative shadow-panel">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#00F0FF] to-[#8A2BE2] p-0.5 mx-auto mb-4">
-            <div className="w-full h-full bg-[#06090F] rounded-[14px] flex items-center justify-center">
-              <Fingerprint className="w-6 h-6 text-[#00F0FF]" />
-            </div>
+          <div className="w-10 h-10 rounded-xl bg-surface-elevated border border-surface-border flex items-center justify-center mx-auto mb-3">
+            <Fingerprint className="w-5 h-5 text-brand-cyan" />
           </div>
-          <h2 className="text-2xl font-extrabold text-white">Welcome Back</h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Access your Doppel profile and visual twin matches
+          <h2 className="text-xl sm:text-2xl font-bold text-content-primary">
+            Sign In to Doppel
+          </h2>
+          <p className="text-xs text-content-secondary mt-1">
+            Access your visual twin matches and discovery controls
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+          <div className="mb-6 p-3.5 rounded-lg bg-status-danger/10 border border-status-danger/30 text-status-danger text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-status-danger flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
+            <label className="block text-xs font-semibold text-content-secondary mb-1">Email Address</label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+              <Mail className="w-4 h-4 text-content-muted absolute left-3.5 top-3" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="elena@example.com"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-700 focus:border-cyan-400 focus:outline-none text-white text-sm"
+                placeholder="you@example.com"
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-surface-elevated border border-surface-border focus:border-brand-cyan focus:outline-none text-content-primary text-xs"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Password</label>
+            <label className="block text-xs font-semibold text-content-secondary mb-1">Password</label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+              <Lock className="w-4 h-4 text-content-muted absolute left-3.5 top-3" />
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-700 focus:border-cyan-400 focus:outline-none text-white text-sm"
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-surface-elevated border border-surface-border focus:border-brand-cyan focus:outline-none text-content-primary text-xs"
               />
             </div>
           </div>
@@ -91,21 +91,21 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-4 py-3 rounded-xl font-bold bg-gradient-to-r from-[#00F0FF] to-[#00A8FF] text-black shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:opacity-95 transition-all flex items-center justify-center gap-2"
+            className="w-full mt-3 py-2.5 rounded-lg font-bold bg-brand-cyan text-black hover:bg-brand-cyanHover disabled:opacity-50 transition-colors flex items-center justify-center gap-2 text-xs shadow-sm"
           >
             {loading ? "Authenticating..." : "Sign In"}
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </form>
 
-        <div className="mt-6 p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-[11px] text-slate-400 text-center">
-          Demo Admin: <code className="text-cyan-400">admin@doppel.ai</code> | <code className="text-cyan-400">AdminPass123!</code>
+        <div className="mt-6 p-3 rounded-lg bg-surface-elevated border border-surface-border text-[11px] text-content-muted text-center font-mono">
+          Demo Admin: <span className="text-brand-cyan">admin@doppel.ai</span> | <span className="text-brand-cyan">AdminPass123!</span>
         </div>
 
-        <div className="text-center mt-6 text-xs text-slate-400">
-          New to Doppel?{" "}
-          <Link href="/signup" className="text-cyan-400 hover:underline font-semibold">
-            Create an Account
+        <div className="text-center mt-6 text-xs text-content-muted">
+          New to the network?{" "}
+          <Link href="/signup" className="text-brand-cyan hover:underline font-semibold">
+            Create Profile
           </Link>
         </div>
       </div>

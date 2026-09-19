@@ -5,63 +5,77 @@ module.exports = {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/services/**/*.{js,ts,jsx,tsx,mdx}"
   ],
   theme: {
     extend: {
       colors: {
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        card: "hsl(var(--card))",
-        "card-foreground": "hsl(var(--card-foreground))",
-        border: "hsl(var(--border))",
-        primary: {
-          DEFAULT: "#00F0FF",
-          glow: "#00f0ff40",
-          dark: "#00838f"
-        },
-        secondary: {
-          DEFAULT: "#8A2BE2",
-          glow: "#8a2be240",
-          dark: "#4b0082"
-        },
-        accent: {
-          cyan: "#00F0FF",
-          violet: "#A855F7",
-          emerald: "#10B981",
-          rose: "#F43F5E"
-        },
+        background: "#090C10",
         surface: {
-          dark: "#0A0D14",
-          card: "#111622",
-          cardHover: "#182030",
-          border: "#1E293B"
+          DEFAULT: "#0F141C",
+          subtle: "#0D1117",
+          elevated: "#161B26",
+          hover: "#1C2331",
+          border: "#1E2638",
+          borderHover: "#2D374D",
+          borderActive: "#00D8E6"
+        },
+        brand: {
+          cyan: "#00D8E6",
+          cyanHover: "#33E0EB",
+          indigo: "#4F46E5",
+          violet: "#7C3AED",
+        },
+        content: {
+          primary: "#F8FAFC",
+          secondary: "#94A3B8",
+          muted: "#64748B",
+          subtle: "#475569"
+        },
+        status: {
+          success: "#10B981",
+          successBg: "rgba(16, 185, 129, 0.12)",
+          warning: "#F59E0B",
+          warningBg: "rgba(245, 158, 11, 0.12)",
+          danger: "#EF4444",
+          dangerBg: "rgba(239, 68, 68, 0.12)",
+          info: "#00D8E6",
+          infoBg: "rgba(0, 216, 230, 0.12)"
         }
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "sans-serif"],
-        mono: ["var(--font-mono)", "monospace"]
+        sans: [
+          "-apple-system",
+          "BlinkMacSystemFont",
+          '"Segoe UI"',
+          "Roboto",
+          '"Helvetica Neue"',
+          "Arial",
+          "sans-serif"
+        ],
+        mono: [
+          '"SFMono-Regular"',
+          "Consolas",
+          '"Liberation Mono"',
+          "Menlo",
+          "Courier",
+          "monospace"
+        ]
       },
-      animation: {
-        "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-        "radar-sweep": "radar 4s linear infinite",
-        "float": "float 6s ease-in-out infinite",
-        "scan-line": "scanline 2.5s ease-in-out infinite"
+      borderRadius: {
+        sm: "6px",
+        md: "8px",
+        lg: "12px",
+        xl: "16px",
+        "2xl": "20px"
       },
-      keyframes: {
-        radar: {
-          "0%": { transform: "rotate(0deg)" },
-          "100%": { transform: "rotate(360deg)" }
-        },
-        float: {
-          "0%, 100%": { transform: "translateY(0px)" },
-          "50%": { transform: "translateY(-10px)" }
-        },
-        scanline: {
-          "0%, 100%": { transform: "translateY(0%)" },
-          "50%": { transform: "translateY(100%)" }
-        }
+      boxShadow: {
+        panel: "0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(30, 38, 56, 0.8)",
+        panelHover: "0 8px 30px -4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(45, 55, 77, 1)",
+        buttonPrimary: "0 2px 8px 0 rgba(0, 216, 230, 0.25)",
+        focusCyan: "0 0 0 2px #090C10, 0 0 0 4px #00D8E6"
       }
-    },
+    }
   },
-  plugins: [],
-}
+  plugins: []
+};

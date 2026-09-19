@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { ApiClient } from "@/lib/api";
+import { SettingsService } from "@/services/settings.service";
 import { 
-  Settings, Shield, Trash2, CheckCircle2, AlertCircle, 
-  RefreshCw, MapPin, Eye, MessageSquare, Lock, AlertTriangle
+  Shield, CheckCircle2, AlertCircle, RefreshCw, 
+  MapPin, Eye, Lock, AlertTriangle, Trash2
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -43,7 +43,7 @@ export default function SettingsPage() {
     setErrorNotice(null);
 
     try {
-      await ApiClient.updateSettings({
+      await SettingsService.updateSettings({
         discovery_enabled: discoveryEnabled,
         show_city: showCity,
         city_name: cityName,
@@ -51,7 +51,7 @@ export default function SettingsPage() {
         bio: bio
       });
       await refreshUser();
-      setSuccessNotice("Privacy preferences updated successfully.");
+      setSuccessNotice("Privacy preferences and discovery settings saved successfully.");
     } catch (err: any) {
       setErrorNotice(err.message || "Failed to update preferences.");
     } finally {
@@ -60,15 +60,15 @@ export default function SettingsPage() {
   };
 
   const handleDeleteBiometricProfile = async () => {
-    if (confirm("Are you sure you want to delete your biometric face profile? Your 512-d embedding vector will be permanently purged from the vector index and you will no longer appear in Doppel searches.")) {
+    if (confirm("Are you sure you want to delete your biometric face profile? Your 512-D embedding vector will be permanently purged from the index and you will no longer appear in visual searches.")) {
       setDeletingBio(true);
       setErrorNotice(null);
       try {
-        await ApiClient.deleteBiometricProfile();
+        await SettingsService.deleteBiometricProfile();
         await refreshUser();
-        setSuccessNotice("Biometric profile and facial embedding permanently purged from the index.");
+        setSuccessNotice("Biometric profile and facial embedding permanently deleted from the vector index.");
       } catch (err: any) {
-        setErrorNotice(err.message || "Failed to delete biometric profile.");
+        setErrorNotice(err.message || "Failed to purge biometric profile.");
       } finally {
         setDeletingBio(false);
       }
@@ -76,10 +76,10 @@ export default function SettingsPage() {
   };
 
   const handleDeleteAccount = async () => {
-    if (confirm("PERMANENT ACTION: Are you sure you want to delete your entire Doppel account? All profile data, history, and biometric records will be permanently erased.")) {
+    if (confirm("PERMANENT ACTION: Are you sure you want to delete your entire Doppel account? All credentials, discovery history, and biometric vectors will be permanently destroyed.")) {
       setDeletingAccount(true);
       try {
-        await ApiClient.deleteAccount();
+        await SettingsService.deleteAccount();
         logout();
       } catch (err: any) {
         setErrorNotice(err.message || "Failed to delete account.");
@@ -91,55 +91,57 @@ export default function SettingsPage() {
   return (
     <div className="min-h-[85vh] py-12 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto space-y-10">
       <div>
-        <h1 className="text-3xl font-extrabold text-white">Privacy & Profile Settings</h1>
-        <p className="text-xs text-slate-400 mt-1">
-          Manage your biometric consent, discovery visibility, and irreversible data deletion controls.
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-content-primary tracking-tight">
+          Privacy & Profile Preferences
+        </h1>
+        <p className="text-xs text-content-secondary mt-1">
+          Manage your biometric consent, discovery visibility, and irreversible vector deletion controls.
         </p>
       </div>
 
       {successNotice && (
-        <div className="p-4 rounded-2xl bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-3">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+        <div className="p-4 rounded-xl bg-status-success/10 border border-status-success/30 text-status-success text-xs flex items-center gap-3">
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
           <span>{successNotice}</span>
         </div>
       )}
 
       {errorNotice && (
-        <div className="p-4 rounded-2xl bg-rose-950/50 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0" />
+        <div className="p-4 rounded-xl bg-status-danger/10 border border-status-danger/30 text-status-danger text-xs flex items-center gap-3">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
           <span>{errorNotice}</span>
         </div>
       )}
 
-      {/* Discovery & Privacy Preferences Form */}
-      <form onSubmit={handleSaveSettings} className="glass-panel rounded-3xl p-8 border border-cyan-500/20 space-y-6">
-        <h2 className="text-lg font-bold text-white flex items-center gap-2 border-b border-white/10 pb-4">
-          <Shield className="w-5 h-5 text-cyan-400" />
+      {/* Discovery & Privacy Controls */}
+      <form onSubmit={handleSaveSettings} className="surface-card rounded-2xl p-6 sm:p-8 border border-surface-border space-y-6 shadow-panel">
+        <h2 className="text-base font-bold text-content-primary flex items-center gap-2 border-b border-surface-border pb-4">
+          <Shield className="w-4 h-4 text-brand-cyan" />
           Discovery & Visibility Controls
         </h2>
 
         <div className="space-y-4 text-xs">
           {/* Discovery Toggle */}
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
+          <div className="flex items-center justify-between p-4 rounded-xl bg-surface-elevated border border-surface-border">
             <div>
-              <span className="text-sm font-semibold text-white block">Participate in Discovery</span>
-              <span className="text-slate-400 text-[11px]">
-                Allow your face embedding to be matched by other consenting Doppel participants.
+              <span className="text-sm font-semibold text-content-primary block">Active Discovery Participation</span>
+              <span className="text-content-muted text-[11px]">
+                Allow your face embedding to be matched by other consenting participants.
               </span>
             </div>
             <input
               type="checkbox"
               checked={discoveryEnabled}
               onChange={(e) => setDiscoveryEnabled(e.target.checked)}
-              className="w-5 h-5 rounded text-cyan-500 focus:ring-cyan-400 bg-slate-800 border-slate-700 cursor-pointer"
+              className="w-4 h-4 rounded text-brand-cyan bg-surface-main border-surface-border cursor-pointer"
             />
           </div>
 
           {/* Contact Requests Toggle */}
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
+          <div className="flex items-center justify-between p-4 rounded-xl bg-surface-elevated border border-surface-border">
             <div>
-              <span className="text-sm font-semibold text-white block">Allow Connection Requests</span>
-              <span className="text-slate-400 text-[11px]">
+              <span className="text-sm font-semibold text-content-primary block">Allow Connection Notes</span>
+              <span className="text-content-muted text-[11px]">
                 Permit discovered visual twins to send you notes and contact invitations.
               </span>
             </div>
@@ -147,24 +149,24 @@ export default function SettingsPage() {
               type="checkbox"
               checked={allowContact}
               onChange={(e) => setAllowContact(e.target.checked)}
-              className="w-5 h-5 rounded text-cyan-500 focus:ring-cyan-400 bg-slate-800 border-slate-700 cursor-pointer"
+              className="w-4 h-4 rounded text-brand-cyan bg-surface-main border-surface-border cursor-pointer"
             />
           </div>
 
           {/* City Location Toggle */}
-          <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-3">
+          <div className="p-4 rounded-xl bg-surface-elevated border border-surface-border space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-sm font-semibold text-white block">Display Approximate City</span>
-                <span className="text-slate-400 text-[11px]">
-                  Share your general metropolitan area with discovered matches.
+                <span className="text-sm font-semibold text-content-primary block">Display General Location</span>
+                <span className="text-content-muted text-[11px]">
+                  Share your approximate metropolitan area with discovered matches.
                 </span>
               </div>
               <input
                 type="checkbox"
                 checked={showCity}
                 onChange={(e) => setShowCity(e.target.checked)}
-                className="w-5 h-5 rounded text-cyan-500 focus:ring-cyan-400 bg-slate-800 border-slate-700 cursor-pointer"
+                className="w-4 h-4 rounded text-brand-cyan bg-surface-main border-surface-border cursor-pointer"
               />
             </div>
             {showCity && (
@@ -172,21 +174,21 @@ export default function SettingsPage() {
                 type="text"
                 value={cityName}
                 onChange={(e) => setCityName(e.target.value)}
-                placeholder="e.g. San Francisco, CA"
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-cyan-400 focus:outline-none"
+                placeholder="e.g. London, UK or Seattle, WA"
+                className="w-full px-3.5 py-2 rounded-lg bg-surface-main border border-surface-border text-content-primary text-xs focus:border-brand-cyan focus:outline-none"
               />
             )}
           </div>
 
           {/* Bio */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Public Bio (Optional)</label>
+            <label className="block text-xs font-semibold text-content-secondary mb-1">Public Bio (Optional)</label>
             <textarea
               rows={3}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              placeholder="Tell your visual twins a bit about your creative passions or hobbies..."
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:border-cyan-400 focus:outline-none"
+              placeholder="Share a short bio with your visual twins..."
+              className="w-full px-3.5 py-2 rounded-lg bg-surface-elevated border border-surface-border text-content-primary text-xs focus:border-brand-cyan focus:outline-none"
             />
           </div>
         </div>
@@ -194,51 +196,51 @@ export default function SettingsPage() {
         <button
           type="submit"
           disabled={saving}
-          className="px-6 py-2.5 rounded-xl text-xs font-bold bg-[#00F0FF] text-black shadow-md shadow-cyan-500/20 hover:opacity-90 transition-all"
+          className="px-5 py-2.5 rounded-lg text-xs font-bold bg-brand-cyan text-black hover:bg-brand-cyanHover transition-colors"
         >
           {saving ? "Saving Changes..." : "Save Privacy Preferences"}
         </button>
       </form>
 
-      {/* Danger Zone: Biometric Purge & Account Deletion */}
-      <div className="glass-panel rounded-3xl p-8 border border-rose-500/30 space-y-6">
-        <h2 className="text-lg font-bold text-rose-400 flex items-center gap-2 border-b border-rose-500/20 pb-4">
-          <AlertTriangle className="w-5 h-5 text-rose-400" />
-          Biometric Data Deletion & Account Purge
+      {/* Danger Zone: Biometric Purge & Deletion */}
+      <div className="surface-card rounded-2xl p-6 sm:p-8 border border-status-danger/30 space-y-6 shadow-panel">
+        <h2 className="text-base font-bold text-status-danger flex items-center gap-2 border-b border-status-danger/20 pb-4">
+          <AlertTriangle className="w-4 h-4 text-status-danger" />
+          Biometric Data Deletion & Account Erasure
         </h2>
 
         <div className="space-y-4 text-xs">
-          {/* Delete Biometric Profile */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-2xl bg-rose-950/20 border border-rose-500/20 gap-4">
+          {/* Purge Biometrics */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl bg-status-danger/5 border border-status-danger/20 gap-4">
             <div>
-              <span className="text-sm font-semibold text-white block">Delete Biometric Profile Only</span>
-              <span className="text-slate-400 text-[11px]">
-                Immediately removes your 512-d vector from the vector database. Keeps your account active.
+              <span className="text-sm font-semibold text-content-primary block">Purge Biometric Embedding Only</span>
+              <span className="text-content-muted text-[11px]">
+                Immediately drops your 512-D vector from the vector store. Your account stays active.
               </span>
             </div>
             <button
               type="button"
               onClick={handleDeleteBiometricProfile}
               disabled={deletingBio}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30 whitespace-nowrap"
+              className="px-4 py-2 rounded-lg text-xs font-semibold bg-status-danger/10 text-status-danger border border-status-danger/30 hover:bg-status-danger/20 whitespace-nowrap transition-colors"
             >
-              {deletingBio ? "Purging..." : "Purge Biometrics"}
+              {deletingBio ? "Purging..." : "Purge Face Vector"}
             </button>
           </div>
 
           {/* Delete Account */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-2xl bg-rose-950/30 border border-rose-500/30 gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl bg-status-danger/10 border border-status-danger/30 gap-4">
             <div>
-              <span className="text-sm font-semibold text-rose-300 block">Delete Entire Account</span>
-              <span className="text-slate-400 text-[11px]">
-                Irreversibly deletes all account credentials, match histories, and facial embeddings.
+              <span className="text-sm font-semibold text-status-danger block">Permanently Delete Account</span>
+              <span className="text-content-muted text-[11px]">
+                Irreversibly erases all credentials, discovery logs, settings, and biometric records.
               </span>
             </div>
             <button
               type="button"
               onClick={handleDeleteAccount}
               disabled={deletingAccount}
-              className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white shadow-lg shadow-rose-600/30 hover:bg-rose-700 whitespace-nowrap"
+              className="px-4 py-2 rounded-lg text-xs font-bold bg-status-danger text-white hover:opacity-90 whitespace-nowrap transition-opacity"
             >
               {deletingAccount ? "Deleting..." : "Permanently Delete Account"}
             </button>

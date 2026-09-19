@@ -4,10 +4,13 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { ApiClient } from "@/lib/api";
+import { MatchingService } from "@/services/matching.service";
+import { DoppelMatch } from "@/types/domain";
+import { ComparisonViewer } from "@/components/matching/ComparisonViewer";
+import { SimilarityMeter } from "@/components/matching/SimilarityMeter";
 import { 
-  Fingerprint, MapPin, Send, ShieldAlert, Ban, ArrowLeft, 
-  CheckCircle2, AlertCircle, RefreshCw, Eye, Sparkles, Lock
+  ArrowLeft, MapPin, Send, Ban, ShieldAlert, CheckCircle2, 
+  AlertCircle, RefreshCw, Lock, Sparkles, UserCheck
 } from "lucide-react";
 
 export default function MatchDetailPage() {
@@ -16,31 +19,33 @@ export default function MatchDetailPage() {
   const { user } = useAuth();
   const matchId = params?.id as string;
 
-  const [match, setMatch] = useState<any | null>(null);
+  const [match, setMatch] = useState<DoppelMatch | null>(null);
   const [loading, setLoading] = useState(true);
   const [connectMessage, setConnectMessage] = useState("");
   const [connectStatus, setConnectStatus] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
     const fetchDetail = async () => {
       try {
         setLoading(true);
-        const data = await ApiClient.getMatchDetail(matchId);
+        setError(null);
+        const data = await MatchingService.getMatchById(matchId);
         setMatch(data);
       } catch (err: any) {
-        // If not in single get by id directly from session, load mock / history
+        // Fallback search through match history
         try {
-          const history = await ApiClient.getMatchHistory();
-          const found = history.matches.find((m: any) => m.match_id === matchId);
+          const history = await MatchingService.getHistory();
+          const found = history.matches.find((m: DoppelMatch) => m.match_id === matchId);
           if (found) {
             setMatch(found);
           } else {
-            setError("Match profile not found or is no longer searchable.");
+            setError("The requested match profile is no longer available or was removed from discovery.");
           }
         } catch {
-          setError("Failed to load match details.");
+          setError("Failed to retrieve match details.");
         }
       } finally {
         setLoading(false);
@@ -52,42 +57,47 @@ export default function MatchDetailPage() {
     }
   }, [matchId]);
 
-  const handleSendConnection = async () => {
+  const handleSendConnection = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!match) return;
+    setIsSending(true);
     try {
-      await ApiClient.sendConnection({
-        receiver_id: match.matched_user_id,
-        message: connectMessage || "Hello! We are visual twins on Doppel."
-      });
-      setConnectStatus("Connection request sent successfully.");
+      await MatchingService.sendConnection(
+        match.matched_user_id,
+        connectMessage || `Hi ${match.display_name}! Our Doppel similarity score is ${match.similarity_score.toFixed(1)}%.`
+      );
+      setConnectStatus("Connection invitation successfully delivered.");
+      setConnectMessage("");
     } catch (err: any) {
-      setError(err.message || "Could not send connection request.");
+      setError(err.message || "Unable to send connection invitation.");
+    } finally {
+      setIsSending(false);
     }
   };
 
   const handleBlock = async () => {
     if (!match) return;
-    if (confirm("Block this participant? They will never appear in your searches again.")) {
+    if (confirm(`Block @${match.username}? They will never appear in your future discovery scans and will not be able to contact you.`)) {
       try {
-        await ApiClient.blockUser(match.matched_user_id);
-        setActionNotice("User blocked. Returning to matches...");
-        setTimeout(() => router.push("/matches"), 1500);
+        await MatchingService.blockUser(match.matched_user_id);
+        setActionNotice("Participant blocked. Returning to matches...");
+        setTimeout(() => router.push("/matches"), 1400);
       } catch (err: any) {
-        setError(err.message || "Failed to block user.");
+        setError(err.message || "Failed to block participant.");
       }
     }
   };
 
   const handleReport = async () => {
     if (!match) return;
-    const reason = prompt("Please enter the reason for reporting this profile:");
-    if (reason) {
+    const reason = prompt("Please provide a reason for reporting this profile (e.g., impersonation, abusive photo):");
+    if (reason && reason.trim()) {
       try {
-        await ApiClient.reportUser({
-          reported_user_id: match.matched_user_id,
-          reason,
-          details: "Reported from match inspection view."
-        });
+        await MatchingService.reportUser(
+          match.matched_user_id,
+          reason.trim(),
+          "Report submitted from visual match inspection view."
+        );
         setActionNotice("Report submitted to Doppel Trust & Safety.");
       } catch (err: any) {
         setError(err.message || "Failed to submit report.");
@@ -97,9 +107,9 @@ export default function MatchDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center">
-        <RefreshCw className="w-8 h-8 text-cyan-400 animate-spin mb-3" />
-        <p className="text-xs text-slate-400 font-mono">Retrieving Match Telemetry...</p>
+      <div className="min-h-[70vh] flex flex-col items-center justify-center space-y-3">
+        <RefreshCw className="w-6 h-6 text-brand-cyan animate-spin" />
+        <p className="text-xs text-content-muted font-mono">Loading Profile Telemetry...</p>
       </div>
     );
   }
@@ -107,164 +117,166 @@ export default function MatchDetailPage() {
   if (error || !match) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center px-4">
-        <div className="max-w-md w-full glass-panel rounded-3xl p-8 text-center">
-          <AlertCircle className="w-12 h-12 text-rose-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">Match Unavailable</h2>
-          <p className="text-xs text-slate-400 mb-6">{error || "Record not found."}</p>
+        <div className="max-w-md w-full surface-card rounded-2xl p-8 text-center border border-surface-border space-y-4 shadow-panel">
+          <AlertCircle className="w-10 h-10 text-status-danger mx-auto opacity-70" />
+          <h2 className="text-lg font-bold text-content-primary">Match Not Available</h2>
+          <p className="text-xs text-content-secondary leading-relaxed">{error || "Record not found."}</p>
           <Link
             href="/discover"
-            className="px-6 py-2.5 rounded-xl text-xs font-bold bg-cyan-500 text-black hover:opacity-90"
+            className="inline-flex items-center gap-1 px-5 py-2.5 rounded-lg text-xs font-bold bg-brand-cyan text-black hover:bg-brand-cyanHover transition-colors"
           >
-            Return to Discover
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Return to Discovery
           </Link>
         </div>
       </div>
     );
   }
 
+  // Calculate raw distance from similarity score: distance = 1 - (score / 100)
+  const rawDistance = Math.max(0, 1 - (match.similarity_score / 100));
+
   return (
-    <div className="min-h-[85vh] py-12 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+    <div className="min-h-[85vh] py-12 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto space-y-8">
+      {/* Back Link */}
       <Link
         href="/discover"
-        className="inline-flex items-center gap-2 text-xs text-slate-400 hover:text-cyan-400 mb-8 transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs text-content-muted hover:text-brand-cyan transition-colors"
       >
-        <ArrowLeft className="w-4 h-4" />
+        <ArrowLeft className="w-3.5 h-3.5" />
         Back to Discovery
       </Link>
 
       {actionNotice && (
-        <div className="mb-6 p-4 rounded-2xl bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-3">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+        <div className="p-4 rounded-xl bg-status-success/10 border border-status-success/30 text-status-success text-xs flex items-center gap-3">
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
           <span>{actionNotice}</span>
         </div>
       )}
 
       {/* Main Inspection Card */}
-      <div className="glass-panel rounded-3xl p-8 sm:p-12 border border-cyan-500/30 relative shadow-2xl">
-        {/* Top Header Badge */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-6 mb-8">
+      <div className="surface-card rounded-2xl p-6 sm:p-10 border border-surface-border space-y-8 shadow-panel">
+        {/* Header Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-surface-border pb-6">
           <div>
-            <div className="inline-block px-3 py-1 rounded-md bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-mono font-bold uppercase tracking-wider mb-2">
-              Rank #{match.ranking} • Cosine Metric
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-surface-elevated border border-surface-border text-brand-cyan text-xs font-mono font-bold uppercase tracking-wider mb-2">
+              Rank #{match.ranking} Visual Match
             </div>
-            <h1 className="text-3xl font-extrabold text-white">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-content-primary">
               {match.display_name}
             </h1>
-            <p className="text-xs text-slate-400 font-mono mt-0.5">
-              @{match.username}
+            <div className="text-xs text-content-muted font-mono mt-0.5 flex items-center gap-3">
+              <span>@{match.username}</span>
               {match.city_name && (
-                <span className="ml-3 inline-flex items-center gap-1 text-slate-300">
-                  <MapPin className="w-3 h-3 text-cyan-400" />
+                <span className="inline-flex items-center gap-1 text-content-secondary">
+                  <MapPin className="w-3 h-3 text-brand-cyan" />
                   {match.city_name}
                 </span>
               )}
-            </p>
+            </div>
           </div>
 
-          <div className="text-right">
-            <div className="text-4xl font-extrabold text-[#00F0FF] glow-cyan font-mono">
-              {match.similarity_score}%
+          <div className="text-left sm:text-right">
+            <div className="text-3xl font-extrabold text-brand-cyan font-mono">
+              {match.similarity_score.toFixed(1)}%
             </div>
-            <div className="text-[10px] text-slate-400 font-mono uppercase tracking-widest">
-              Visual Correlation
-            </div>
+            <span className="text-[10px] text-content-muted font-mono uppercase tracking-wider block">
+              Cosine Similarity
+            </span>
           </div>
         </div>
 
-        {/* Side-by-Side Avatar Comparison */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center mb-8">
-          <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col items-center text-center">
-            <img
-              src={user?.avatar || "https://api.dicebear.com/7.x/bottts/svg?seed=me"}
-              alt="You"
-              className="w-28 h-28 rounded-2xl bg-slate-800 border-2 border-cyan-400 p-1 mb-3"
-            />
-            <span className="text-sm font-bold text-white">Your Profile</span>
-            <span className="text-xs text-slate-500 font-mono">@{user?.username || "you"}</span>
-          </div>
+        {/* Side-by-Side Comparison */}
+        <ComparisonViewer
+          userAvatar={user?.avatar}
+          userDisplayName={user?.display_name || "You"}
+          userUsername={user?.username || "you"}
+          matchAvatar={match.avatar}
+          matchDisplayName={match.display_name}
+          matchUsername={match.username}
+          similarityScore={match.similarity_score}
+        />
 
-          <div className="p-6 rounded-2xl bg-slate-900/80 border border-purple-500/40 flex flex-col items-center text-center shadow-lg shadow-purple-500/10">
-            <img
-              src={match.avatar}
-              alt={match.display_name}
-              className="w-28 h-28 rounded-2xl bg-slate-800 border-2 border-purple-400 p-1 mb-3"
-            />
-            <span className="text-sm font-bold text-white">{match.display_name}</span>
-            <span className="text-xs text-purple-400 font-mono">@{match.username}</span>
-          </div>
-        </div>
+        {/* Similarity Metric Gauge */}
+        <SimilarityMeter
+          similarityScore={match.similarity_score}
+          rawDistance={rawDistance}
+        />
 
-        {/* AI Correlation Explanation */}
-        <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2 mb-8">
-          <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs uppercase tracking-wider">
-            <Sparkles className="w-4 h-4 text-cyan-400" />
-            <span>Algorithmic Feature Proximity Analysis</span>
+        {/* Feature Correlation Analysis */}
+        <div className="p-4 rounded-xl bg-surface-elevated border border-surface-border space-y-2">
+          <div className="flex items-center gap-2 text-brand-cyan font-bold text-xs uppercase tracking-wider">
+            <Sparkles className="w-3.5 h-3.5 text-brand-cyan" />
+            <span>512-D Feature Space Correlation Analysis</span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+          <p className="text-xs sm:text-sm text-content-secondary leading-relaxed">
             {match.match_explanation}
           </p>
-          <p className="text-[11px] text-slate-500 italic pt-1">
-            * Note: Visual similarity scores represent Euclidean/Cosine spatial distance in the deep feature manifold and do not indicate genetic or biological kinship.
+          <p className="text-[11px] text-content-muted pt-1">
+            * Scientific Note: Visual similarity measures angular proximity in the mathematical ArcFace feature space. It represents morphological resemblance and does not imply genetic or genealogical kinship.
           </p>
         </div>
 
-        {/* Social Connection Section */}
+        {/* Connection Request Section */}
         {match.allow_contact && (
-          <div className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800 mb-8">
-            <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
-              <Send className="w-4 h-4 text-cyan-400" />
-              Send Doppel Connection Request
+          <div className="surface-elevated rounded-xl p-5 border border-surface-border space-y-3">
+            <h3 className="text-xs font-bold text-content-primary uppercase tracking-wider flex items-center gap-2">
+              <Send className="w-3.5 h-3.5 text-brand-cyan" />
+              Send Connection Invitation
             </h3>
-            <p className="text-xs text-slate-400 mb-4">
-              Send a note to exchange contact details or share your visual match card.
+            <p className="text-xs text-content-secondary">
+              Reach out to {match.display_name} to compare notes or share your visual match card.
             </p>
 
             {connectStatus ? (
-              <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs">
-                {connectStatus}
+              <div className="p-3 rounded-lg bg-status-success/10 border border-status-success/30 text-status-success text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <span>{connectStatus}</span>
               </div>
             ) : (
-              <div className="flex flex-col sm:flex-row gap-3">
+              <form onSubmit={handleSendConnection} className="flex flex-col sm:flex-row gap-2.5">
                 <input
                   type="text"
                   value={connectMessage}
                   onChange={(e) => setConnectMessage(e.target.value)}
-                  placeholder="Hey, looks like our visual similarity score is 94%!"
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:border-cyan-400 focus:outline-none"
+                  placeholder={`Hi ${match.display_name}, looks like our facial similarity is ${match.similarity_score.toFixed(1)}%!`}
+                  className="flex-1 px-3.5 py-2 rounded-lg bg-surface-main border border-surface-border text-xs text-content-primary focus:border-brand-cyan focus:outline-none"
                 />
                 <button
-                  onClick={handleSendConnection}
-                  className="px-6 py-2.5 rounded-xl text-xs font-bold bg-[#00F0FF] text-black shadow-md shadow-cyan-500/20 hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                  type="submit"
+                  disabled={isSending}
+                  className="px-5 py-2 rounded-lg text-xs font-bold bg-brand-cyan text-black hover:bg-brand-cyanHover disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
                 >
-                  Send Request
+                  <Send className="w-3 h-3" />
+                  {isSending ? "Sending..." : "Send Invite"}
                 </button>
-              </div>
+              </form>
             )}
           </div>
         )}
 
-        {/* Moderation Controls: Block & Report */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-white/10 text-xs text-slate-400">
+        {/* Privacy & Moderation Controls */}
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-surface-border text-xs text-content-muted">
           <div className="flex items-center gap-4">
             <button
               onClick={handleBlock}
-              className="flex items-center gap-1.5 text-slate-400 hover:text-amber-400 transition-colors"
+              className="flex items-center gap-1 text-content-muted hover:text-status-warning transition-colors"
             >
-              <Ban className="w-4 h-4" />
-              Block User
+              <Ban className="w-3.5 h-3.5" />
+              Block Participant
             </button>
             <button
               onClick={handleReport}
-              className="flex items-center gap-1.5 text-slate-400 hover:text-rose-400 transition-colors"
+              className="flex items-center gap-1 text-content-muted hover:text-status-danger transition-colors"
             >
-              <ShieldAlert className="w-4 h-4" />
+              <ShieldAlert className="w-3.5 h-3.5" />
               Report Profile
             </button>
           </div>
 
-          <div className="flex items-center gap-1.5 text-slate-500">
-            <Lock className="w-3.5 h-3.5" />
-            <span>Encrypted Vector Identity</span>
+          <div className="flex items-center gap-1 text-[11px] text-content-muted">
+            <Lock className="w-3 h-3" />
+            <span>Encrypted 512-D Representation</span>
           </div>
         </div>
       </div>
