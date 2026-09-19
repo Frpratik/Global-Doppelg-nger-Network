@@ -1,6 +1,7 @@
 """
 Integration Tests for DOPPEL Auth, Consent, and Matching API
 """
+import uuid
 import pytest
 from httpx import AsyncClient, ASGITransport
 from apps.api.main import app
@@ -21,14 +22,18 @@ async def test_health_check_endpoint():
 @pytest.mark.asyncio
 async def test_register_and_login_flow():
     await init_db()
+    uid = uuid.uuid4().hex[:6]
+    test_email = f"test_{uid}@doppel.ai"
+    test_uname = f"user_{uid}"
+
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         # 1. Register
         reg_payload = {
-            "email": "test_user_flow@doppel.ai",
+            "email": test_email,
             "password": "SecurePassword123!",
             "display_name": "Test Journey User",
-            "username": "test_journey",
+            "username": test_uname,
             "biometric_consent": True,
             "discovery_consent": True
         }
@@ -40,7 +45,7 @@ async def test_register_and_login_flow():
 
         # 2. Login
         login_payload = {
-            "email": "test_user_flow@doppel.ai",
+            "email": test_email,
             "password": "SecurePassword123!"
         }
         log_res = await client.post("/api/v1/auth/login", json=login_payload)
@@ -53,16 +58,27 @@ async def test_register_and_login_flow():
         me_res = await client.get("/api/v1/auth/me", headers=headers)
         assert me_res.status_code == 200
         me_data = me_res.json()
-        assert me_data["username"] == "test_journey"
-        assert me_data["email"] == "test_user_flow@doppel.ai"
+        assert me_data["username"] == test_uname
+        assert me_data["email"] == test_email
 
 @pytest.mark.asyncio
 async def test_consent_retrieval_and_update():
+    uid = uuid.uuid4().hex[:6]
+    test_email = f"consent_{uid}@doppel.ai"
+    test_uname = f"consent_{uid}"
+
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        # Login
-        log_res = await client.post("/api/v1/auth/login", json={"email": "test_user_flow@doppel.ai", "password": "SecurePassword123!"})
-        access_token = log_res.json()["access_token"]
+        # Register
+        reg_res = await client.post("/api/v1/auth/register", json={
+            "email": test_email,
+            "password": "SecurePassword123!",
+            "display_name": "Consent Test User",
+            "username": test_uname,
+            "biometric_consent": True,
+            "discovery_consent": True
+        })
+        access_token = reg_res.json()["access_token"]
         headers = {"Authorization": f"Bearer {access_token}"}
 
         # Get consent
@@ -81,10 +97,21 @@ async def test_consent_retrieval_and_update():
 
 @pytest.mark.asyncio
 async def test_ai_chat_assistant_faq():
+    uid = uuid.uuid4().hex[:6]
+    test_email = f"chat_{uid}@doppel.ai"
+    test_uname = f"chat_{uid}"
+
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        log_res = await client.post("/api/v1/auth/login", json={"email": "test_user_flow@doppel.ai", "password": "SecurePassword123!"})
-        access_token = log_res.json()["access_token"]
+        reg_res = await client.post("/api/v1/auth/register", json={
+            "email": test_email,
+            "password": "SecurePassword123!",
+            "display_name": "Chat Test User",
+            "username": test_uname,
+            "biometric_consent": True,
+            "discovery_consent": True
+        })
+        access_token = reg_res.json()["access_token"]
         headers = {"Authorization": f"Bearer {access_token}"}
 
         chat_res = await client.post(

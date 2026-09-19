@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  # FastAPI Backend Service
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.api
+    container_name: doppel-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PROJECT_NAME=DOPPEL
+      - DATABASE_URL=sqlite+aiosqlite:///./doppel.db
+      - SYNC_DATABASE_URL=sqlite:///./doppel.db
+      - SECRET_KEY=doppel-production-super-secret-key-change-in-prod-128bits
+      - VECTOR_BACKEND=memory
+      - EMBEDDING_DIMENSION=512
+      - MODEL_NAME=ArcFace-MobileFaceNet-ONNX
+      - MODEL_VERSION=v1.2.0
+      - DEFAULT_MATCH_THRESHOLD=0.58
+    volumes:
+      - ./uploads:/app/uploads
+      - ./doppel.db:/app/doppel.db
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # Next.js 14 Frontend Web Application
+  web:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.web
+    container_name: doppel-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  doppel_uploads:
