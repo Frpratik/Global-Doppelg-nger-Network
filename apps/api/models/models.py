@@ -21,7 +21,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     display_name = Column(String(100), nullable=False)
     username = Column(String(50), unique=True, nullable=False, index=True)
-    avatar = Column(String(500), nullable=True)
+    avatar = Column(Text, nullable=True)
     is_admin = Column(Boolean, default=False)
     email_verified = Column(Boolean, default=False)
     account_status = Column(String(30), default=AccountStatus.ACTIVE.value, index=True)

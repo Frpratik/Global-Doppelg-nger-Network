@@ -4,6 +4,7 @@ Handles Image Quality Validation, 512-d ArcFace Feature Extraction, Vector Index
 """
 from datetime import datetime, timezone
 import base64
+import cv2
 from typing import Optional
 from fastapi import APIRouter, Depends, UploadFile, File, Form, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -156,7 +157,37 @@ async def enroll_face(
         }
     )
 
-    # 5. Save or update FaceProfile record in DB
+    # 5. Extract and save actual profile photo thumbnail as user avatar
+    try:
+        img_bgr = pipeline.decode_image_bytes(image_bytes)
+        if img_bgr is not None:
+            h, w = img_bgr.shape[:2]
+            if result.quality.face_box and len(result.quality.face_box) == 4:
+                fx, fy, fw, fh = result.quality.face_box
+                cx, cy = fx + fw // 2, fy + fh // 2
+                box_size = max(fw, fh) * 1.5
+                x1 = max(0, int(cx - box_size // 2))
+                y1 = max(0, int(cy - box_size // 2))
+                x2 = min(w, int(cx + box_size // 2))
+                y2 = min(h, int(cy + box_size // 2))
+                crop = img_bgr[y1:y2, x1:x2]
+            else:
+                min_dim = min(h, w)
+                x1 = (w - min_dim) // 2
+                y1 = (h - min_dim) // 2
+                crop = img_bgr[y1:y1+min_dim, x1:x1+min_dim]
+
+            if crop.size > 0:
+                resized = cv2.resize(crop, (256, 256), interpolation=cv2.INTER_AREA)
+                success, enc = cv2.imencode('.jpg', resized, [int(cv2.IMWRITE_JPEG_QUALITY), 88])
+                if success:
+                    b64_thumb = base64.b64encode(enc.tobytes()).decode('utf-8')
+                    current_user.avatar = f"data:image/jpeg;base64,{b64_thumb}"
+                    db.add(current_user)
+    except Exception:
+        pass
+
+    # 6. Save or update FaceProfile record in DB
     profile_stmt = select(FaceProfile).where(FaceProfile.user_id == current_user.id)
     profile_res = await db.execute(profile_stmt)
     face_profile = profile_res.scalar_one_or_none()
