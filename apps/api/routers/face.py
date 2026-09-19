@@ -157,33 +157,24 @@ async def enroll_face(
         }
     )
 
-    # 5. Extract and save actual profile photo thumbnail as user avatar
+    # 5. Save the whole original profile picture (DP) as user avatar
     try:
         img_bgr = pipeline.decode_image_bytes(image_bytes)
         if img_bgr is not None:
             h, w = img_bgr.shape[:2]
-            if result.quality.face_box and len(result.quality.face_box) == 4:
-                fx, fy, fw, fh = result.quality.face_box
-                cx, cy = fx + fw // 2, fy + fh // 2
-                box_size = max(fw, fh) * 1.5
-                x1 = max(0, int(cx - box_size // 2))
-                y1 = max(0, int(cy - box_size // 2))
-                x2 = min(w, int(cx + box_size // 2))
-                y2 = min(h, int(cy + box_size // 2))
-                crop = img_bgr[y1:y2, x1:x2]
+            max_dim = 512
+            if max(h, w) > max_dim:
+                scale = max_dim / max(h, w)
+                new_w, new_h = int(w * scale), int(h * scale)
+                resized = cv2.resize(img_bgr, (new_w, new_h), interpolation=cv2.INTER_AREA)
             else:
-                min_dim = min(h, w)
-                x1 = (w - min_dim) // 2
-                y1 = (h - min_dim) // 2
-                crop = img_bgr[y1:y1+min_dim, x1:x1+min_dim]
+                resized = img_bgr
 
-            if crop.size > 0:
-                resized = cv2.resize(crop, (256, 256), interpolation=cv2.INTER_AREA)
-                success, enc = cv2.imencode('.jpg', resized, [int(cv2.IMWRITE_JPEG_QUALITY), 88])
-                if success:
-                    b64_thumb = base64.b64encode(enc.tobytes()).decode('utf-8')
-                    current_user.avatar = f"data:image/jpeg;base64,{b64_thumb}"
-                    db.add(current_user)
+            success, enc = cv2.imencode('.jpg', resized, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+            if success:
+                b64_full = base64.b64encode(enc.tobytes()).decode('utf-8')
+                current_user.avatar = f"data:image/jpeg;base64,{b64_full}"
+                db.add(current_user)
     except Exception:
         pass
 
