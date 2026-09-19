@@ -86,6 +86,52 @@ export interface ConnectionRequest {
   created_at: string;
 }
 
+export interface ConnectionPeerInfo {
+  user_id: string;
+  display_name: string;
+  username: string;
+  avatar?: string;
+  city_name?: string;
+  bio?: string;
+  similarity_score?: number;
+}
+
+export interface ConnectionItem {
+  id: string;
+  status: "pending" | "accepted" | "declined";
+  message?: string;
+  created_at: string;
+  is_sender: boolean;
+  peer: ConnectionPeerInfo;
+}
+
+export interface ConnectionsList {
+  pending_incoming: ConnectionItem[];
+  pending_outgoing: ConnectionItem[];
+  accepted_twins: ConnectionItem[];
+}
+
+export interface ChatMessage {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  is_read: boolean;
+  created_at: string;
+  is_mine: boolean;
+}
+
+export interface ChatConversation {
+  twin_id: string;
+  display_name: string;
+  username: string;
+  avatar?: string;
+  similarity_score?: number;
+  last_message?: string;
+  last_message_at?: string;
+  unread_count: number;
+}
+
 export interface AuditLogItem {
   id: string;
   user_id?: string;

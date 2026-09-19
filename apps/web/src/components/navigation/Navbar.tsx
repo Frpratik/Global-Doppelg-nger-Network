@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { 
   Fingerprint, Search, ShieldCheck, Cpu, HelpCircle, 
-  LayoutDashboard, Settings, LogOut, Menu, X 
+  LayoutDashboard, Settings, LogOut, Menu, X, MessageSquare 
 } from "lucide-react";
 
 export function Navbar() {
@@ -17,6 +17,7 @@ export function Navbar() {
   const navLinks = [
     { name: "Discover", href: "/discover", icon: Search },
     { name: "My Matches", href: "/matches", icon: Fingerprint, authRequired: true },
+    { name: "Twin Chat", href: "/messages", icon: MessageSquare, authRequired: true },
     { name: "Architecture", href: "/architecture", icon: Cpu },
     { name: "Privacy", href: "/privacy", icon: ShieldCheck },
     { name: "Doppel AI", href: "/help", icon: HelpCircle },

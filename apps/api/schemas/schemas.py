@@ -115,8 +115,9 @@ class MatchHistoryResponse(BaseModel):
 
 # ----------------- Social & Moderation Schemas -----------------
 class ConnectionRequestCreate(BaseModel):
-    receiver_id: str
+    receiver_id: Optional[str] = None
     message: Optional[str] = None
+    note: Optional[str] = None
 
 class ConnectionResponse(BaseModel):
     id: str
@@ -125,6 +126,54 @@ class ConnectionResponse(BaseModel):
     status: str
     message: Optional[str]
     created_at: datetime
+
+class ConnectionRespondRequest(BaseModel):
+    action: str = Field(..., description="'accept' or 'decline'")
+
+class ConnectionPeerInfo(BaseModel):
+    user_id: str
+    display_name: str
+    username: str
+    avatar: Optional[str] = None
+    city_name: Optional[str] = None
+    bio: Optional[str] = None
+    similarity_score: Optional[float] = None
+
+class ConnectionItemResponse(BaseModel):
+    id: str
+    status: str
+    message: Optional[str] = None
+    created_at: datetime
+    is_sender: bool
+    peer: ConnectionPeerInfo
+
+class ConnectionsListResponse(BaseModel):
+    pending_incoming: List[ConnectionItemResponse] = []
+    pending_outgoing: List[ConnectionItemResponse] = []
+    accepted_twins: List[ConnectionItemResponse] = []
+
+# ----------------- Twin Chat & Direct Messaging Schemas -----------------
+class ChatMessageCreate(BaseModel):
+    content: str = Field(..., min_length=1, max_length=2000)
+
+class ChatMessageResponse(BaseModel):
+    id: str
+    sender_id: str
+    receiver_id: str
+    content: str
+    is_read: bool
+    created_at: datetime
+    is_mine: bool = False
+
+class ChatConversationSummary(BaseModel):
+    twin_id: str
+    display_name: str
+    username: str
+    avatar: Optional[str] = None
+    similarity_score: Optional[float] = None
+    last_message: Optional[str] = None
+    last_message_at: Optional[datetime] = None
+    unread_count: int = 0
 
 class ReportCreateRequest(BaseModel):
     reported_user_id: str

@@ -14,7 +14,7 @@ from apps.api.core.config import settings
 from apps.api.core.errors import DoppelException
 from apps.api.db.session import init_db
 from apps.api.repositories.vector_store import get_vector_store
-from apps.api.routers import auth, consent, face, matches, users, account, admin, ai
+from apps.api.routers import auth, consent, face, matches, users, account, admin, ai, chat
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -156,3 +156,4 @@ app.include_router(users.router, prefix=api_v1_prefix)
 app.include_router(account.router, prefix=api_v1_prefix)
 app.include_router(admin.router, prefix=api_v1_prefix)
 app.include_router(ai.router, prefix=api_v1_prefix)
+app.include_router(chat.router, prefix=api_v1_prefix)

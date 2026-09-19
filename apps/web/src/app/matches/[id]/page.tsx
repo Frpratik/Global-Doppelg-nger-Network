@@ -5,12 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { MatchingService } from "@/services/matching.service";
+import { ConnectionService } from "@/services/connection.service";
 import { DoppelMatch } from "@/types/domain";
 import { ComparisonViewer } from "@/components/matching/ComparisonViewer";
 import { SimilarityMeter } from "@/components/matching/SimilarityMeter";
 import { 
   ArrowLeft, MapPin, Send, Ban, ShieldAlert, CheckCircle2, 
-  AlertCircle, RefreshCw, Lock, Sparkles, UserCheck
+  AlertCircle, RefreshCw, Lock, Sparkles, UserCheck, MessageSquare, Clock
 } from "lucide-react";
 
 export default function MatchDetailPage() {
@@ -20,6 +21,7 @@ export default function MatchDetailPage() {
   const matchId = params?.id as string;
 
   const [match, setMatch] = useState<DoppelMatch | null>(null);
+  const [twinStatus, setTwinStatus] = useState<"none" | "pending" | "accepted">("none");
   const [loading, setLoading] = useState(true);
   const [connectMessage, setConnectMessage] = useState("");
   const [connectStatus, setConnectStatus] = useState<string | null>(null);
@@ -34,6 +36,20 @@ export default function MatchDetailPage() {
         setError(null);
         const data = await MatchingService.getMatchById(matchId);
         setMatch(data);
+
+        // Check connection status
+        try {
+          const conns = await ConnectionService.getConnections();
+          const isAccepted = conns.accepted_twins.some((c) => c.peer.user_id === data.matched_user_id);
+          const isPendingOut = conns.pending_outgoing.some((c) => c.peer.user_id === data.matched_user_id);
+          const isPendingIn = conns.pending_incoming.some((c) => c.peer.user_id === data.matched_user_id);
+
+          if (isAccepted) setTwinStatus("accepted");
+          else if (isPendingOut || isPendingIn) setTwinStatus("pending");
+          else setTwinStatus("none");
+        } catch {
+          // Handled gracefully
+        }
       } catch (err: any) {
         // Fallback search through match history
         try {
@@ -217,40 +233,81 @@ export default function MatchDetailPage() {
           </p>
         </div>
 
-        {/* Connection Request Section */}
+        {/* Twin Connection & Chat Launch Section */}
         {match.allow_contact && (
           <div className="surface-elevated rounded-xl p-5 border border-surface-border space-y-3">
-            <h3 className="text-xs font-bold text-content-primary uppercase tracking-wider flex items-center gap-2">
-              <Send className="w-3.5 h-3.5 text-brand-cyan" />
-              Send Connection Invitation
-            </h3>
-            <p className="text-xs text-content-secondary">
-              Reach out to {match.display_name} to compare notes or share your visual match card.
-            </p>
-
-            {connectStatus ? (
-              <div className="p-3 rounded-lg bg-status-success/10 border border-status-success/30 text-status-success text-xs flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                <span>{connectStatus}</span>
+            {twinStatus === "accepted" ? (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <span className="text-xs font-bold text-status-success uppercase tracking-wider flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Confirmed Visual Twins
+                  </span>
+                  <p className="text-xs text-content-secondary mt-0.5">
+                    You and {match.display_name} have mutually accepted a Twin Connection. Direct messaging is unlocked!
+                  </p>
+                </div>
+                <Link
+                  href={`/messages?twin=${match.matched_user_id}`}
+                  className="px-5 py-2.5 rounded-lg text-xs font-bold bg-brand-cyan text-black hover:bg-brand-cyanHover transition-colors flex items-center gap-2 whitespace-nowrap shadow-sm"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Open Twin Chat
+                </Link>
+              </div>
+            ) : twinStatus === "pending" ? (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <span className="text-xs font-bold text-status-warning uppercase tracking-wider flex items-center gap-1.5">
+                    <Clock className="w-4 h-4" />
+                    Twin Request Pending
+                  </span>
+                  <p className="text-xs text-content-secondary mt-0.5">
+                    A Twin Connection request has been sent to {match.display_name}. Chat will unlock once accepted.
+                  </p>
+                </div>
+                <Link
+                  href="/messages"
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-surface-main hover:bg-surface-border text-content-secondary hover:text-content-primary border border-surface-border transition-colors flex items-center gap-1.5"
+                >
+                  View in Inbox
+                </Link>
               </div>
             ) : (
-              <form onSubmit={handleSendConnection} className="flex flex-col sm:flex-row gap-2.5">
-                <input
-                  type="text"
-                  value={connectMessage}
-                  onChange={(e) => setConnectMessage(e.target.value)}
-                  placeholder={`Hi ${match.display_name}, looks like our facial similarity is ${match.similarity_score.toFixed(1)}%!`}
-                  className="flex-1 px-3.5 py-2 rounded-lg bg-surface-main border border-surface-border text-xs text-content-primary focus:border-brand-cyan focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  disabled={isSending}
-                  className="px-5 py-2 rounded-lg text-xs font-bold bg-brand-cyan text-black hover:bg-brand-cyanHover disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
-                >
-                  <Send className="w-3 h-3" />
-                  {isSending ? "Sending..." : "Send Invite"}
-                </button>
-              </form>
+              <>
+                <h3 className="text-xs font-bold text-content-primary uppercase tracking-wider flex items-center gap-2">
+                  <Send className="w-3.5 h-3.5 text-brand-cyan" />
+                  Request to be Twins (Like Instagram Connection)
+                </h3>
+                <p className="text-xs text-content-secondary">
+                  Send a Twin Request to {match.display_name}. Once they accept your invitation, private direct messaging will unlock!
+                </p>
+
+                {connectStatus ? (
+                  <div className="p-3 rounded-lg bg-status-success/10 border border-status-success/30 text-status-success text-xs flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                    <span>{connectStatus}</span>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSendConnection} className="flex flex-col sm:flex-row gap-2.5">
+                    <input
+                      type="text"
+                      value={connectMessage}
+                      onChange={(e) => setConnectMessage(e.target.value)}
+                      placeholder={`Hi ${match.display_name}, let's connect as Doppel twins! Our likeness is ${match.similarity_score.toFixed(1)}%.`}
+                      className="flex-1 px-3.5 py-2 rounded-lg bg-surface-main border border-surface-border text-xs text-content-primary focus:border-brand-cyan focus:outline-none"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isSending}
+                      className="px-5 py-2 rounded-lg text-xs font-bold bg-brand-cyan text-black hover:bg-brand-cyanHover disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
+                    >
+                      <Send className="w-3 h-3" />
+                      {isSending ? "Sending..." : "Send Twin Request"}
+                    </button>
+                  </form>
+                )}
+              </>
             )}
           </div>
         )}
