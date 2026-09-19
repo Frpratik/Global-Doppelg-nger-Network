@@ -14,9 +14,9 @@ DOPPEL_KNOWLEDGE_BASE = {
         "and discovery are indexed. You can disable discovery or delete your biometric profile at any time."
     ),
     "matching": (
-        "Face matching in Doppel uses 512-dimensional facial feature embeddings extracted using an ArcFace/MobileFaceNet "
-        "deep architecture. Vectors are normalized and compared using cosine similarity ($S = \cos(\theta)$). Scores above "
-        "75% indicate strong morphological resemblance in jawline, inter-ocular distance, nose structure, and facial proportions."
+        r"Face matching in Doppel uses 512-dimensional facial feature embeddings extracted using an ArcFace/MobileFaceNet "
+        r"deep architecture. Vectors are normalized and compared using cosine similarity ($S = \cos(\theta)$). Scores above "
+        r"75% indicate strong morphological resemblance in jawline, inter-ocular distance, nose structure, and facial proportions."
     ),
     "deletion": (
         "When you delete your biometric profile, your 512-d embedding vector is immediately purged from the vector index, "
