@@ -4,6 +4,7 @@ Performs vector similarity search, enforces rigorous privacy filters, calculates
 """
 from typing import List, Dict, Any, Optional
 import time
+import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, and_
 from apps.api.core.config import settings
@@ -138,8 +139,9 @@ class MatchingEngine:
                 # Scaled score: Cosine similarity mapped to 0-100%
                 scaled_score = round(max(0.0, min(1.0, res.similarity_score)) * 100, 1)
 
+                match_uuid = uuid.uuid4().hex[:8]
                 item = DoppelMatchItem(
-                    match_id=f"match-{requester_id[:8]}-{candidate_user.id[:8]}",
+                    match_id=f"match-{requester_id[:8]}-{candidate_user.id[:8]}-{match_uuid}",
                     matched_user_id=candidate_user.id,
                     display_name=candidate_user.display_name,
                     username=candidate_user.username,
@@ -159,8 +161,8 @@ class MatchingEngine:
 
         execution_time_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
-        # 5. Record DiscoverySession
-        session_id = f"session-{requester_id[:8]}-{int(time.time())}"
+        # 5. Record DiscoverySession with unique UUID
+        session_id = f"session-{requester_id[:8]}-{uuid.uuid4().hex[:12]}"
         session_record = DiscoverySession(
             id=session_id,
             user_id=requester_id,
