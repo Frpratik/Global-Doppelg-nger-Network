@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { SettingsService } from "@/services/settings.service";
 import { MatchingService } from "@/services/matching.service";
+import { ChatService } from "@/services/chat.service";
 import { DoppelMatch } from "@/types/domain";
 import { 
   Search, ShieldCheck, Cpu, UserCheck, ArrowRight, 
-  CheckCircle2, RefreshCw, Eye, Fingerprint, MapPin
+  CheckCircle2, RefreshCw, Eye, Fingerprint, MapPin,
+  MessageSquare, Bell, Sparkles, UserPlus
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -17,6 +19,11 @@ export default function DashboardPage() {
   const [toggleLoading, setToggleLoading] = useState(false);
   const [recentMatches, setRecentMatches] = useState<DoppelMatch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState({
+    unread_messages: 0,
+    pending_requests: 0,
+    total_notifications: 0,
+  });
 
   useEffect(() => {
     if (user?.settings?.discovery_enabled !== undefined) {
@@ -27,8 +34,12 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchRecent = async () => {
       try {
-        const history = await MatchingService.getHistory();
+        const [history, notifs] = await Promise.all([
+          MatchingService.getHistory(),
+          ChatService.getNotifications().catch(() => ({ unread_messages: 0, pending_requests: 0, total_notifications: 0 }))
+        ]);
         setRecentMatches(history.matches?.slice(0, 3) || []);
+        setNotifications(notifs);
       } catch {
         // Handled gracefully
       } finally {
@@ -53,7 +64,50 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-[85vh] py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-10">
+    <div className="min-h-[85vh] py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
+      {/* High-Visibility Notifications & Messages Alert Banner */}
+      {notifications.total_notifications > 0 && (
+        <div className="surface-card rounded-2xl p-5 border-2 border-brand-cyan/50 bg-brand-cyan/5 shadow-[0_0_20px_rgba(6,182,212,0.2)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-brand-cyan/20 border border-brand-cyan/40 flex items-center justify-center text-brand-cyan flex-shrink-0 animate-pulse">
+              <Bell className="w-5 h-5 text-brand-cyan" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-content-primary flex items-center gap-2">
+                <span>New Twin Activity Detected</span>
+                <span className="px-2 py-0.5 rounded-full bg-brand-cyan text-black font-mono font-bold text-[10px]">
+                  {notifications.total_notifications} Unread
+                </span>
+              </h3>
+              <p className="text-xs text-content-secondary mt-0.5">
+                {notifications.unread_messages > 0 && `${notifications.unread_messages} unread message(s)`}
+                {notifications.unread_messages > 0 && notifications.pending_requests > 0 && " • "}
+                {notifications.pending_requests > 0 && `${notifications.pending_requests} pending twin request(s)`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            {notifications.pending_requests > 0 && (
+              <Link
+                href="/messages?tab=requests"
+                className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold bg-surface-elevated hover:bg-surface-border text-brand-cyan border border-brand-cyan/40 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                Review Requests ({notifications.pending_requests})
+              </Link>
+            )}
+            <Link
+              href="/messages"
+              className="flex-1 sm:flex-none px-5 py-2 rounded-xl text-xs font-bold bg-brand-cyan text-black hover:bg-brand-cyanHover transition-all shadow-buttonPrimary flex items-center justify-center gap-1.5"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              Open Twin Chat
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Profile & Status Card */}
       <div className="surface-card rounded-2xl p-6 sm:p-8 border border-surface-border flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-panel">
         <div className="flex items-center gap-5">
@@ -86,6 +140,14 @@ export default function DashboardPage() {
 
         {/* Action Controls */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+          <Link
+            href="/messages"
+            className="px-4 py-2.5 rounded-lg text-xs font-semibold bg-surface-elevated hover:bg-surface-border border border-surface-border text-content-primary transition-colors flex items-center justify-center gap-2"
+          >
+            <MessageSquare className="w-3.5 h-3.5 text-brand-cyan" />
+            Twin Chat {notifications.total_notifications > 0 && `(${notifications.total_notifications})`}
+          </Link>
+
           <button
             onClick={handleToggleDiscovery}
             disabled={toggleLoading}
@@ -114,7 +176,7 @@ export default function DashboardPage() {
       </div>
 
       {/* System Telemetry & Status Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-5">
         <div className="surface-card rounded-xl p-5 border border-surface-border space-y-2">
           <div className="flex items-center justify-between text-xs text-content-muted">
             <span className="uppercase tracking-wider font-semibold">Biometric Status</span>
@@ -125,6 +187,22 @@ export default function DashboardPage() {
           </div>
           <p className="text-[11px] text-content-muted">
             {user?.is_enrolled ? "512-D L2 normalized embedding in active index" : "Upload your selfie to participate"}
+          </p>
+        </div>
+
+        <div className="surface-card rounded-xl p-5 border border-surface-border space-y-2">
+          <div className="flex items-center justify-between text-xs text-content-muted">
+            <span className="uppercase tracking-wider font-semibold">Twin Messaging</span>
+            <MessageSquare className="w-4 h-4 text-brand-cyan" />
+          </div>
+          <div className="text-xl font-bold text-content-primary flex items-center gap-2">
+            <span>{notifications.unread_messages} Unread</span>
+            {notifications.unread_messages > 0 && (
+              <span className="w-2.5 h-2.5 rounded-full bg-brand-cyan animate-ping" />
+            )}
+          </div>
+          <p className="text-[11px] text-content-muted">
+            {notifications.pending_requests} pending connection request(s)
           </p>
         </div>
 

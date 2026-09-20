@@ -9,7 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, and_
 from apps.api.db.session import get_db
 from apps.api.dependencies import get_current_user
-from apps.api.models.models import User, UserSettings, UserBlock, UserReport, ConnectionRequest, AuditLog
+from apps.api.models.models import (
+    User, UserSettings, UserBlock, UserReport, ConnectionRequest, AuditLog, DirectMessage
+)
 from apps.api.schemas.schemas import (
     UserSettingsUpdateRequest, ConnectionRequestCreate, ConnectionResponse,
     ConnectionRespondRequest, ConnectionsListResponse, ConnectionItemResponse,
@@ -153,6 +155,7 @@ async def send_connection_request(
         raise DoppelException(status_code=403, error_code=ErrorCode.FORBIDDEN, message="This user has disabled connection requests.")
 
     msg_text = (payload.message or payload.note) if payload else None
+    cleaned_msg = msg_text.strip() if msg_text else None
 
     # Check existing request
     req_stmt = select(ConnectionRequest).where(
@@ -164,6 +167,26 @@ async def send_connection_request(
     req_res = await db.execute(req_stmt)
     existing = req_res.scalar_one_or_none()
     if existing:
+        if cleaned_msg and not existing.message:
+            existing.message = cleaned_msg
+            # Also store direct message if missing
+            dm_stmt = select(DirectMessage).where(
+                DirectMessage.sender_id == current_user.id,
+                DirectMessage.receiver_id == target_id,
+                DirectMessage.content == cleaned_msg
+            )
+            dm_res = await db.execute(dm_stmt)
+            if not dm_res.scalar_one_or_none():
+                dm = DirectMessage(
+                    sender_id=current_user.id,
+                    receiver_id=target_id,
+                    content=cleaned_msg,
+                    is_read=False
+                )
+                db.add(dm)
+            await db.commit()
+            await db.refresh(existing)
+
         return ConnectionResponse(
             id=existing.id,
             sender_id=existing.sender_id,
@@ -177,9 +200,20 @@ async def send_connection_request(
         sender_id=current_user.id,
         receiver_id=target_id,
         status=ConnectionStatus.PENDING.value,
-        message=msg_text
+        message=cleaned_msg
     )
     db.add(conn)
+
+    # Immediately persist initial request message into DirectMessage stream
+    if cleaned_msg:
+        dm = DirectMessage(
+            sender_id=current_user.id,
+            receiver_id=target_id,
+            content=cleaned_msg,
+            is_read=False
+        )
+        db.add(dm)
+
     await db.commit()
     await db.refresh(conn)
 
@@ -295,6 +329,24 @@ async def respond_to_connection(
     if payload.action.lower() == "accept":
         conn.status = ConnectionStatus.ACCEPTED.value
         msg = "Twin request accepted! You can now chat."
+
+        # Ensure initial connection request message is recorded in chat messages
+        if conn.message and conn.message.strip():
+            dm_stmt = select(DirectMessage).where(
+                DirectMessage.sender_id == conn.sender_id,
+                DirectMessage.receiver_id == conn.receiver_id,
+                DirectMessage.content == conn.message.strip()
+            )
+            dm_res = await db.execute(dm_stmt)
+            if not dm_res.scalar_one_or_none():
+                init_dm = DirectMessage(
+                    sender_id=conn.sender_id,
+                    receiver_id=conn.receiver_id,
+                    content=conn.message.strip(),
+                    is_read=False,
+                    created_at=conn.created_at
+                )
+                db.add(init_dm)
     else:
         conn.status = "declined"
         msg = "Twin request declined."

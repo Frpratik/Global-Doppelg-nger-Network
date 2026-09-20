@@ -97,7 +97,7 @@ async def test_twin_request_and_chat_flow():
         assert len(conv_list) >= 1
         conv_a = next(c for c in conv_list if c["twin_id"] == user_a_id)
         assert conv_a["last_message"] == "Hello my twin! Incredible match!"
-        assert conv_a["unread_count"] == 1
+        assert conv_a["unread_count"] == 2  # Includes initial friend request note + direct message
 
         # 9. User B fetches messages in conversation -> Expect read receipt mark
         chat_history = await client.get(
@@ -106,8 +106,9 @@ async def test_twin_request_and_chat_flow():
         )
         assert chat_history.status_code == 200
         messages = chat_history.json()
-        assert len(messages) >= 1
-        assert messages[-1]["content"] == "Hello my twin! Incredible match!"
+        assert len(messages) == 2
+        assert messages[0]["content"] == "We matched at 94.2% similarity!"  # First message is the connection note
+        assert messages[1]["content"] == "Hello my twin! Incredible match!"
 
         # 10. User B sends reply to User A
         reply_res = await client.post(

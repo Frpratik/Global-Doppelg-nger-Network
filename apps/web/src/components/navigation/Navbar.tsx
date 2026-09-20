@@ -1,23 +1,53 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { ChatService } from "@/services/chat.service";
 import { 
   Fingerprint, Search, ShieldCheck, Cpu, HelpCircle, 
-  LayoutDashboard, Settings, LogOut, Menu, X, MessageSquare 
+  LayoutDashboard, Settings, LogOut, Menu, X, MessageSquare, Bell 
 } from "lucide-react";
 
 export function Navbar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [notifications, setNotifications] = useState({
+    unread_messages: 0,
+    pending_requests: 0,
+    total_notifications: 0,
+  });
+
+  // Poll for unread messages and twin connection requests
+  useEffect(() => {
+    if (!user) return;
+
+    const checkNotifications = async () => {
+      try {
+        const notifs = await ChatService.getNotifications();
+        setNotifications(notifs);
+      } catch {
+        // Fallback silently if offline
+      }
+    };
+
+    checkNotifications();
+    const interval = setInterval(checkNotifications, 4000);
+    return () => clearInterval(interval);
+  }, [user, pathname]);
 
   const navLinks = [
     { name: "Discover", href: "/discover", icon: Search },
     { name: "My Matches", href: "/matches", icon: Fingerprint, authRequired: true },
-    { name: "Twin Chat", href: "/messages", icon: MessageSquare, authRequired: true },
+    { 
+      name: "Messages", 
+      href: "/messages", 
+      icon: MessageSquare, 
+      authRequired: true,
+      badge: notifications.total_notifications > 0 ? notifications.total_notifications : undefined
+    },
     { name: "Architecture", href: "/architecture", icon: Cpu },
     { name: "Privacy", href: "/privacy", icon: ShieldCheck },
     { name: "Doppel AI", href: "/help", icon: HelpCircle },
@@ -51,14 +81,19 @@ export function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   isActive
                     ? "text-brand-cyan bg-brand-cyan/10 border border-brand-cyan/30"
                     : "text-content-secondary hover:text-content-primary hover:bg-surface-elevated border border-transparent"
                 }`}
               >
                 <Icon className={`w-3.5 h-3.5 ${isActive ? "text-brand-cyan" : "text-content-muted"}`} />
-                {link.name}
+                <span>{link.name}</span>
+                {link.badge !== undefined && (
+                  <span className="ml-1 px-1.5 py-0.2 rounded-full bg-brand-cyan text-black font-mono font-bold text-[10px] animate-pulse">
+                    {link.badge}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -68,6 +103,29 @@ export function Navbar() {
         <div className="hidden md:flex items-center gap-3">
           {user ? (
             <div className="flex items-center gap-2">
+              {/* Highlighted Messages & Notifications Hub Button */}
+              <Link
+                href="/messages"
+                className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                  notifications.total_notifications > 0
+                    ? "bg-brand-cyan/15 text-brand-cyan border-brand-cyan/50 shadow-[0_0_12px_rgba(6,182,212,0.25)] animate-pulse"
+                    : "bg-surface-elevated text-content-secondary border-surface-border hover:border-brand-cyan/40 hover:text-content-primary"
+                }`}
+                title={
+                  notifications.total_notifications > 0
+                    ? `${notifications.unread_messages} unread message(s), ${notifications.pending_requests} pending request(s)`
+                    : "Twin Chat & Messages"
+                }
+              >
+                <MessageSquare className={`w-3.5 h-3.5 ${notifications.total_notifications > 0 ? "text-brand-cyan" : "text-content-muted"}`} />
+                <span>Messages</span>
+                {notifications.total_notifications > 0 && (
+                  <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-brand-cyan text-black font-mono font-black text-[10px] shadow-sm">
+                    {notifications.total_notifications}
+                  </span>
+                )}
+              </Link>
+
               <Link
                 href="/dashboard"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-elevated text-content-primary border border-surface-border hover:border-brand-cyan/40 transition-colors"
@@ -109,13 +167,26 @@ export function Navbar() {
         </div>
 
         {/* Mobile menu trigger */}
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="md:hidden p-2 text-content-secondary hover:text-content-primary"
-          aria-label="Toggle Navigation Menu"
-        >
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        <div className="flex md:hidden items-center gap-2">
+          {user && notifications.total_notifications > 0 && (
+            <Link
+              href="/messages"
+              className="p-1.5 rounded-lg bg-brand-cyan/20 border border-brand-cyan/40 text-brand-cyan flex items-center gap-1"
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span className="text-[10px] font-bold font-mono px-1 rounded bg-brand-cyan text-black">
+                {notifications.total_notifications}
+              </span>
+            </Link>
+          )}
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="p-2 text-content-secondary hover:text-content-primary"
+            aria-label="Toggle Navigation Menu"
+          >
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Drawer */}
@@ -130,17 +201,39 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-2.5 px-3.5 py-2 rounded-lg text-xs font-medium ${
+                className={`flex items-center justify-between px-3.5 py-2 rounded-lg text-xs font-medium ${
                   isActive ? "text-brand-cyan bg-brand-cyan/10" : "text-content-secondary"
                 }`}
               >
-                <Icon className="w-4 h-4" />
-                {link.name}
+                <div className="flex items-center gap-2.5">
+                  <Icon className="w-4 h-4" />
+                  <span>{link.name}</span>
+                </div>
+                {link.badge !== undefined && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-brand-cyan text-black font-mono font-bold text-[10px]">
+                    {link.badge}
+                  </span>
+                )}
               </Link>
             );
           })}
           {user ? (
             <div className="pt-3 border-t border-surface-border space-y-1">
+              <Link
+                href="/messages"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center justify-between px-3.5 py-2 text-xs font-semibold text-brand-cyan bg-brand-cyan/10 rounded-lg"
+              >
+                <div className="flex items-center gap-2.5">
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Twin Messages</span>
+                </div>
+                {notifications.total_notifications > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-brand-cyan text-black font-mono font-bold text-[10px]">
+                    {notifications.total_notifications} New
+                  </span>
+                )}
+              </Link>
               <Link
                 href="/dashboard"
                 onClick={() => setMobileOpen(false)}

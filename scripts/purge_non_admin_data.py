@@ -17,7 +17,7 @@ from sqlalchemy import select, delete
 from apps.api.db.session import AsyncSessionLocal
 from apps.api.models.models import (
     User, FaceProfile, Consent, UserSettings, Match, 
-    DiscoverySession, ImageAsset, ConnectionRequest, UserBlock, AuditLog
+    DiscoverySession, ImageAsset, ConnectionRequest, UserBlock, UserReport, DirectMessage, AuditLog
 )
 from apps.api.core.security import get_password_hash
 from apps.api.repositories.vector_store import get_vector_store
@@ -73,11 +73,12 @@ async def reset_to_super_admin():
         admin_id = admin_user.id
 
         print("[3/4] Purging non-admin records...")
-        await session.execute(delete(Match).where(Match.requester_id != admin_id))
-        await session.execute(delete(Match).where(Match.matched_user_id != admin_id))
-        await session.execute(delete(DiscoverySession).where(DiscoverySession.user_id != admin_id))
+        await session.execute(delete(DirectMessage))
         await session.execute(delete(ConnectionRequest))
+        await session.execute(delete(UserReport))
         await session.execute(delete(UserBlock))
+        await session.execute(delete(Match))
+        await session.execute(delete(DiscoverySession))
         await session.execute(delete(ImageAsset).where(ImageAsset.user_id != admin_id))
         await session.execute(delete(FaceProfile).where(FaceProfile.user_id != admin_id))
         await session.execute(delete(Consent).where(Consent.user_id != admin_id))

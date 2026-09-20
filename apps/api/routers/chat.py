@@ -42,6 +42,32 @@ async def verify_accepted_twin_connection(user_a_id: str, user_b_id: str, db: As
     c_res = await db.execute(conn_stmt)
     return c_res.scalar_one_or_none() is not None
 
+@router.get("/notifications")
+async def get_chat_notifications(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Retrieve total unread chat messages and pending incoming connection requests."""
+    unread_msg_stmt = select(func.count(DirectMessage.id)).where(
+        DirectMessage.receiver_id == current_user.id,
+        DirectMessage.is_read == False
+    )
+    unread_res = await db.execute(unread_msg_stmt)
+    unread_messages = unread_res.scalar() or 0
+
+    pending_req_stmt = select(func.count(ConnectionRequest.id)).where(
+        ConnectionRequest.receiver_id == current_user.id,
+        ConnectionRequest.status == ConnectionStatus.PENDING.value
+    )
+    pending_res = await db.execute(pending_req_stmt)
+    pending_requests = pending_res.scalar() or 0
+
+    return {
+        "unread_messages": unread_messages,
+        "pending_requests": pending_requests,
+        "total_notifications": unread_messages + pending_requests
+    }
+
 @router.get("/conversations", response_model=List[ChatConversationSummary])
 async def get_twin_conversations(
     current_user: User = Depends(get_current_user),
@@ -63,6 +89,10 @@ async def get_twin_conversations(
         return []
 
     twin_ids = [c.receiver_id if c.sender_id == current_user.id else c.sender_id for c in connections]
+    conn_by_twin = {
+        (c.receiver_id if c.sender_id == current_user.id else c.sender_id): c
+        for c in connections
+    }
 
     # 2. Fetch twin users
     users_stmt = select(User).where(User.id.in_(twin_ids))
@@ -88,6 +118,16 @@ async def get_twin_conversations(
         ).order_by(DirectMessage.created_at.desc()).limit(1)
         last_msg_res = await db.execute(last_msg_stmt)
         last_msg = last_msg_res.scalar_one_or_none()
+
+        # Fallback to connection request intro message if no direct messages
+        last_text = last_msg.content if last_msg else None
+        last_time = last_msg.created_at if last_msg else None
+
+        if not last_text:
+            twin_conn = conn_by_twin.get(twin_id)
+            if twin_conn and twin_conn.message and twin_conn.message.strip():
+                last_text = twin_conn.message.strip()
+                last_time = twin_conn.created_at
 
         # Get unread count
         unread_stmt = select(func.count(DirectMessage.id)).where(
@@ -115,8 +155,8 @@ async def get_twin_conversations(
                 username=twin_user.username,
                 avatar=twin_user.avatar,
                 similarity_score=sim_score,
-                last_message=last_msg.content if last_msg else None,
-                last_message_at=last_msg.created_at if last_msg else None,
+                last_message=last_text,
+                last_message_at=last_time,
                 unread_count=unread_count
             )
         )
@@ -151,7 +191,30 @@ async def get_twin_messages(
         )
     ).order_by(DirectMessage.created_at.asc())
     msg_res = await db.execute(msg_stmt)
-    messages = msg_res.scalars().all()
+    messages = list(msg_res.scalars().all())
+
+    # Fallback: If no direct messages exist yet, check if the connection request had an intro note/message
+    if not messages:
+        conn_stmt = select(ConnectionRequest).where(
+            or_(
+                and_(ConnectionRequest.sender_id == current_user.id, ConnectionRequest.receiver_id == twin_id),
+                and_(ConnectionRequest.sender_id == twin_id, ConnectionRequest.receiver_id == current_user.id)
+            )
+        )
+        conn_res = await db.execute(conn_stmt)
+        conn_req = conn_res.scalar_one_or_none()
+        if conn_req and conn_req.message and conn_req.message.strip():
+            init_dm = DirectMessage(
+                sender_id=conn_req.sender_id,
+                receiver_id=conn_req.receiver_id,
+                content=conn_req.message.strip(),
+                is_read=(conn_req.receiver_id == current_user.id),
+                created_at=conn_req.created_at
+            )
+            db.add(init_dm)
+            await db.commit()
+            await db.refresh(init_dm)
+            messages = [init_dm]
 
     # Mark unread incoming messages as read
     await db.execute(

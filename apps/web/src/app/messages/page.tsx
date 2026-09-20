@@ -19,8 +19,9 @@ export default function MessagesPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const initialTwinId = searchParams.get("twin");
+  const tabParam = searchParams.get("tab");
 
-  const [activeTab, setActiveTab] = useState<"chats" | "requests">("chats");
+  const [activeTab, setActiveTab] = useState<"chats" | "requests">(tabParam === "requests" ? "requests" : "chats");
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [connections, setConnections] = useState<ConnectionsList>({
     pending_incoming: [],
@@ -41,6 +42,13 @@ export default function MessagesPage() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  // Sync tab param if it changes in URL
+  useEffect(() => {
+    if (tabParam === "requests" || tabParam === "chats") {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
 
   // Fetch conversations and connection requests
   const fetchData = async (silent: boolean = false) => {
@@ -72,6 +80,9 @@ export default function MessagesPage() {
             });
           }
         }
+      } else if (!selectedTwin && !initialTwinId && convs.length > 0 && activeTab === "chats") {
+        // Auto-select first conversation so user doesn't see blank screen
+        setSelectedTwin(convs[0]);
       }
     } catch (err: any) {
       if (!silent) setErrorNotice(err.message || "Failed to load messages.");
@@ -466,11 +477,17 @@ export default function MessagesPage() {
                     </p>
                   </div>
                 ) : (
-                  messages.map((m) => (
+                  messages.map((m, idx) => (
                     <div
                       key={m.id}
                       className={`flex flex-col ${m.is_mine ? "items-end" : "items-start"}`}
                     >
+                      {idx === 0 && (
+                        <div className="flex items-center gap-1 text-[10px] font-mono text-brand-cyan mb-1 px-1 font-semibold">
+                          <Sparkles className="w-3 h-3 text-brand-cyan" />
+                          <span>Initial Twin Connection Note</span>
+                        </div>
+                      )}
                       <div
                         className={`max-w-[75%] p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words ${
                           m.is_mine

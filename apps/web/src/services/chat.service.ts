@@ -15,5 +15,11 @@ export const ChatService = {
       method: "POST",
       body: JSON.stringify({ content })
     });
+  },
+
+  async getNotifications(): Promise<{ unread_messages: number; pending_requests: number; total_notifications: number }> {
+    return ApiClient.request<{ unread_messages: number; pending_requests: number; total_notifications: number }>("/chat/notifications", {
+      method: "GET"
+    });
   }
 };
