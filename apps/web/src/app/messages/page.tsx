@@ -290,11 +290,11 @@ export default function MessagesPage() {
                           alt={conv.display_name}
                           className="w-12 h-12 rounded-xl bg-surface-elevated border border-surface-border object-cover p-0.5"
                         />
-                        {conv.similarity_score && (
+                        {conv.similarity_score !== undefined && conv.similarity_score !== null && conv.similarity_score > 0 ? (
                           <span className="absolute -bottom-1 -right-1 px-1 rounded bg-brand-cyan text-black text-[9px] font-mono font-extrabold">
                             {conv.similarity_score.toFixed(0)}%
                           </span>
-                        )}
+                        ) : null}
                       </div>
 
                       <div className="flex-1 min-w-0">
@@ -438,11 +438,11 @@ export default function MessagesPage() {
                       <h3 className="text-sm font-bold text-content-primary">
                         {selectedTwin.display_name}
                       </h3>
-                      {selectedTwin.similarity_score && (
+                      {selectedTwin.similarity_score !== undefined && selectedTwin.similarity_score !== null && selectedTwin.similarity_score > 0 ? (
                         <span className="px-1.5 py-0.2 rounded bg-brand-cyan/20 text-brand-cyan font-mono font-bold text-[10px] border border-brand-cyan/30">
                           {selectedTwin.similarity_score.toFixed(1)}% Match
                         </span>
-                      )}
+                      ) : null}
                     </div>
                     <span className="text-xs text-content-muted font-mono">@{selectedTwin.username}</span>
                   </div>
