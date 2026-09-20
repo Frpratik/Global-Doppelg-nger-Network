@@ -8,7 +8,8 @@ import { QualityChecklist } from "@/components/enrollment/QualityChecklist";
 import { QualityAssessment } from "@/types/domain";
 import { 
   Camera, Upload, ShieldCheck, CheckCircle2, 
-  AlertCircle, RefreshCw, ArrowRight, VideoOff 
+  AlertCircle, RefreshCw, ArrowRight, VideoOff,
+  Lock, Sparkles, Sliders
 } from "lucide-react";
 
 export default function EnrollPage() {
@@ -40,7 +41,7 @@ export default function EnrollPage() {
       }
       setCameraActive(true);
     } catch (err) {
-      setError("Camera access was not permitted. You can still enroll by uploading a clear portrait photo.");
+      setError("Camera access was not granted. You can still enroll by uploading a clear portrait photo.");
       setMode("upload");
     }
   };
@@ -138,23 +139,40 @@ export default function EnrollPage() {
   };
 
   return (
-    <div className="py-12 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-8">
+    <div className="min-h-[85vh] py-10 sm:py-14 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-10">
       {/* Header */}
-      <div className="text-center max-w-2xl mx-auto">
-        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-brand-cyan bg-brand-cyan/10 px-2.5 py-1 rounded border border-brand-cyan/20">
-          Biometric Profile Ingestion
-        </span>
-        <h1 className="text-2xl sm:text-3xl font-bold text-content-primary mt-3">
-          Enroll Your Face Profile
+      <div className="text-center max-w-2xl mx-auto space-y-3">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-semibold uppercase tracking-wider">
+          <ShieldCheck className="w-3.5 h-3.5" />
+          <span>Consent-Driven Biometric Setup</span>
+        </div>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-content-primary tracking-tight">
+          Enroll Your Visual Profile
         </h1>
-        <p className="text-xs text-content-secondary mt-1.5 leading-relaxed">
-          Position yourself directly facing the camera with balanced lighting. Our pipeline validates sharpness, single-face presence, and extracts a normalized 512-d feature vector.
+        <p className="text-sm sm:text-base text-content-secondary leading-relaxed">
+          Position yourself facing forward with clear lighting. Our neural pipeline verifies quality, extracts a 512-dimensional vector embedding, and enables cosine discovery.
         </p>
       </div>
 
+      {/* Step Progress Tracker */}
+      <div className="grid grid-cols-3 gap-3 p-2 rounded-2xl bg-surface-card border border-surface-border text-center text-xs">
+        <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-bold flex items-center justify-center gap-2">
+          <span className="w-5 h-5 rounded-full bg-cyan-400 text-black flex items-center justify-center text-[11px] font-bold">1</span>
+          <span className="hidden sm:inline">Portrait Scan</span>
+        </div>
+        <div className={`p-3 rounded-xl border flex items-center justify-center gap-2 font-semibold ${qualityData?.acceptable ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400' : 'bg-surface-background border-surface-border text-content-muted'}`}>
+          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold ${qualityData?.acceptable ? 'bg-cyan-400 text-black' : 'bg-surface-border text-content-muted'}`}>2</span>
+          <span className="hidden sm:inline">Quality Verification</span>
+        </div>
+        <div className={`p-3 rounded-xl border flex items-center justify-center gap-2 font-semibold ${enrolling ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400' : 'bg-surface-background border-surface-border text-content-muted'}`}>
+          <span className="w-5 h-5 rounded-full bg-surface-border text-content-muted flex items-center justify-center text-[11px] font-bold">3</span>
+          <span className="hidden sm:inline">512-D Indexing</span>
+        </div>
+      </div>
+
       {error && (
-        <div className="max-w-2xl mx-auto p-3.5 rounded-lg bg-status-dangerBg border border-status-danger/30 text-status-danger text-xs flex items-start gap-2.5">
-          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+        <div className="p-4 rounded-xl bg-status-danger/10 border border-status-danger/30 text-status-danger text-sm flex items-start gap-3 animate-in fade-in">
+          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <span>{error}</span>
         </div>
       )}
@@ -162,39 +180,39 @@ export default function EnrollPage() {
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left: Viewport */}
-        <div className="lg:col-span-7 surface-card rounded-2xl p-6 border border-surface-border">
+        <div className="lg:col-span-7 p-6 sm:p-8 rounded-3xl bg-surface-card border border-surface-border shadow-sm space-y-5">
           {/* Mode Switcher */}
           {!capturedImage && (
-            <div className="flex items-center gap-2 mb-4 p-1 rounded-lg bg-surface-elevated border border-surface-border">
+            <div className="flex items-center gap-2 p-1.5 rounded-xl bg-surface-background border border-surface-border">
               <button
                 type="button"
                 onClick={() => setMode("camera")}
-                className={`flex-1 py-1.5 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
+                className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
                   mode === "camera"
-                    ? "bg-brand-cyan text-black font-semibold shadow-sm"
+                    ? "bg-cyan-500 text-surface-background shadow-sm"
                     : "text-content-secondary hover:text-content-primary"
                 }`}
               >
-                <Camera className="w-3.5 h-3.5" />
+                <Camera className="w-4 h-4" />
                 Live Camera
               </button>
               <button
                 type="button"
                 onClick={() => setMode("upload")}
-                className={`flex-1 py-1.5 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
+                className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
                   mode === "upload"
-                    ? "bg-brand-cyan text-black font-semibold shadow-sm"
+                    ? "bg-cyan-500 text-surface-background shadow-sm"
                     : "text-content-secondary hover:text-content-primary"
                 }`}
               >
-                <Upload className="w-3.5 h-3.5" />
+                <Upload className="w-4 h-4" />
                 Upload Photo
               </button>
             </div>
           )}
 
           {/* Viewport Frame */}
-          <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-surface-subtle border border-surface-border flex items-center justify-center">
+          <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-surface-background border border-surface-border flex items-center justify-center shadow-inner">
             {capturedImage ? (
               <div className="relative w-full h-full">
                 <img
@@ -204,7 +222,7 @@ export default function EnrollPage() {
                 />
                 {qualityData?.face_box && (
                   <div
-                    className="absolute border border-brand-cyan rounded shadow-sm pointer-events-none"
+                    className="absolute border-2 border-cyan-400 rounded-lg shadow-lg pointer-events-none"
                     style={{
                       left: `${(qualityData.face_box[0] / 640) * 100}%`,
                       top: `${(qualityData.face_box[1] / 480) * 100}%`,
@@ -212,8 +230,8 @@ export default function EnrollPage() {
                       height: `${(qualityData.face_box[3] / 480) * 100}%`,
                     }}
                   >
-                    <span className="bg-brand-cyan text-black text-[9px] font-mono font-bold px-1 py-0.2 rounded-br block w-fit">
-                      1 FACE ({Math.round(qualityData.quality_score * 100)}%)
+                    <span className="bg-cyan-400 text-black text-[10px] font-mono font-bold px-2 py-0.5 rounded-br-md block w-fit">
+                      1 DETECTED FACE ({Math.round(qualityData.quality_score * 100)}%)
                     </span>
                   </div>
                 )}
@@ -229,14 +247,18 @@ export default function EnrollPage() {
                 />
                 {/* Focal Oval Overlay */}
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                  <div className="w-40 h-52 rounded-full border border-dashed border-brand-cyan/60" />
+                  <div className="w-48 h-64 rounded-full border-2 border-dashed border-cyan-400/60 shadow-[0_0_20px_rgba(6,182,212,0.15)]" />
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center p-8 text-center">
-                <Upload className="w-8 h-8 text-content-muted mb-2 opacity-60" />
-                <p className="text-xs font-semibold text-content-primary">Select a portrait photo</p>
-                <p className="text-[11px] text-content-muted mt-0.5">JPEG, PNG or WebP up to 10MB</p>
+              <div className="flex flex-col items-center justify-center p-8 text-center space-y-3">
+                <div className="w-14 h-14 rounded-2xl bg-surface-card border border-surface-border flex items-center justify-center text-cyan-400">
+                  <Upload className="w-7 h-7" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-content-primary">Select a portrait photo</p>
+                  <p className="text-xs text-content-muted mt-0.5">JPEG, PNG or WebP up to 10MB</p>
+                </div>
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -247,44 +269,44 @@ export default function EnrollPage() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="mt-3.5 px-4 py-2 rounded-lg text-xs font-medium bg-surface-elevated text-content-primary border border-surface-border hover:border-brand-cyan/40 transition-colors"
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-surface-elevated text-content-primary border border-surface-border hover:border-cyan-500/40 transition-colors"
                 >
-                  Browse Files
+                  Browse Device Files
                 </button>
               </div>
             )}
           </div>
 
           {/* Action Bar */}
-          <div className="mt-4 flex items-center gap-3">
+          <div className="flex items-center gap-3">
             {capturedImage ? (
               <>
                 <button
                   type="button"
                   onClick={handleRetake}
-                  className="px-4 py-2.5 rounded-lg text-xs font-medium text-content-secondary bg-surface-elevated hover:text-content-primary border border-surface-border transition-colors flex items-center gap-1.5"
+                  className="px-4 py-3 rounded-xl text-xs font-semibold text-content-secondary bg-surface-background hover:text-content-primary border border-surface-border transition-colors flex items-center gap-2"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  Retake
+                  <RefreshCw className="w-4 h-4" />
+                  Retake Photo
                 </button>
                 <button
                   type="button"
                   onClick={handleEnroll}
                   disabled={enrolling || checkingQuality || !qualityData?.acceptable}
-                  className="flex-1 py-2.5 rounded-lg text-xs font-semibold bg-brand-cyan text-black hover:bg-brand-cyanHover shadow-buttonPrimary disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5"
+                  className="flex-1 py-3 rounded-xl text-xs font-bold bg-cyan-500 text-surface-background hover:bg-cyan-400 shadow-md disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 active:scale-95"
                 >
-                  {enrolling ? "Encoding 512-D Vector..." : "Confirm & Enroll Face Profile"}
-                  <ArrowRight className="w-3.5 h-3.5 text-black" />
+                  {enrolling ? "Encoding 512-D Vector..." : "Confirm & Index Biometric Profile"}
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </>
             ) : mode === "camera" ? (
               <button
                 type="button"
                 onClick={capturePhoto}
-                className="w-full py-2.5 rounded-lg text-xs font-semibold bg-brand-cyan text-black hover:bg-brand-cyanHover shadow-buttonPrimary flex items-center justify-center gap-1.5 transition-all"
+                className="w-full py-3 rounded-xl text-xs font-bold bg-cyan-500 text-surface-background hover:bg-cyan-400 shadow-md flex items-center justify-center gap-2 transition-all active:scale-95"
               >
-                <Camera className="w-3.5 h-3.5 text-black" />
-                Capture Selfie
+                <Camera className="w-4 h-4" />
+                Capture Portrait Photo
               </button>
             ) : null}
           </div>

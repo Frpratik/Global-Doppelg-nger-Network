@@ -10,19 +10,21 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        background: "#090C10",
+        background: "#080B10",
         surface: {
           DEFAULT: "#0F141C",
-          subtle: "#0D1117",
-          elevated: "#161B26",
-          hover: "#1C2331",
-          border: "#1E2638",
-          borderHover: "#2D374D",
+          subtle: "#0A0E15",
+          elevated: "#151B27",
+          highlight: "#1C2434",
+          hover: "#182030",
+          border: "#1C2538",
+          borderHover: "#2A3752",
           borderActive: "#00D8E6"
         },
         brand: {
           cyan: "#00D8E6",
           cyanHover: "#33E0EB",
+          cyanGlow: "rgba(0, 216, 230, 0.2)",
           indigo: "#4F46E5",
           violet: "#7C3AED",
         },
@@ -62,18 +64,27 @@ module.exports = {
           "monospace"
         ]
       },
+      maxWidth: {
+        feed: "760px",
+        profile: "1180px",
+        settings: "1040px",
+        explorer: "1400px",
+        inbox: "1280px"
+      },
       borderRadius: {
         sm: "6px",
         md: "8px",
         lg: "12px",
         xl: "16px",
-        "2xl": "20px"
+        "2xl": "20px",
+        "3xl": "28px"
       },
       boxShadow: {
-        panel: "0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(30, 38, 56, 0.8)",
-        panelHover: "0 8px 30px -4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(45, 55, 77, 1)",
-        buttonPrimary: "0 2px 8px 0 rgba(0, 216, 230, 0.25)",
-        focusCyan: "0 0 0 2px #090C10, 0 0 0 4px #00D8E6"
+        panel: "0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(28, 37, 56, 0.8)",
+        panelHover: "0 12px 36px -4px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(42, 55, 82, 1)",
+        glowCyan: "0 0 24px -2px rgba(0, 216, 230, 0.35)",
+        buttonPrimary: "0 2px 10px 0 rgba(0, 216, 230, 0.3)",
+        focusCyan: "0 0 0 2px #080B10, 0 0 0 4px #00D8E6"
       }
     }
   },

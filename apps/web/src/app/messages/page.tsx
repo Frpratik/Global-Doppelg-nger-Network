@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
@@ -15,7 +15,7 @@ import {
   ArrowLeft, Eye, ShieldCheck, MapPin
 } from "lucide-react";
 
-export default function MessagesPage() {
+function MessagesContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const initialTwinId = searchParams.get("twin");
@@ -543,3 +543,19 @@ export default function MessagesPage() {
     </div>
   );
 }
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-[85vh] flex items-center justify-center">
+        <div className="flex items-center gap-2 text-cyan-400 text-sm">
+          <RefreshCw className="w-4 h-4 animate-spin" />
+          <span>Loading Message Hub...</span>
+        </div>
+      </div>
+    }>
+      <MessagesContent />
+    </Suspense>
+  );
+}
+

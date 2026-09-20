@@ -4,10 +4,10 @@
 
 :root {
   color-scheme: dark;
-  --bg-main: #090C10;
+  --bg-main: #080B10;
   --surface-main: #0F141C;
-  --surface-elevated: #161B26;
-  --surface-border: #1E2638;
+  --surface-elevated: #151B27;
+  --surface-border: #1C2538;
   --brand-cyan: #00D8E6;
 }
 
@@ -15,7 +15,7 @@ body {
   background-color: var(--bg-main);
   color: #F8FAFC;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  line-height: 1.5;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -23,57 +23,83 @@ body {
 /* Accessible focus ring */
 *:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px #090C10, 0 0 0 4px #00D8E6;
+  box-shadow: 0 0 0 2px #080B10, 0 0 0 4px #00D8E6;
 }
 
-/* Restrained Product Surface Utilities */
+/* Premium Surface Utilities */
 .surface-card {
   background-color: #0F141C;
-  border: 1px solid #1E2638;
-  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.4);
+  border: 1px solid #1C2538;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(28, 37, 56, 0.4);
 }
 
 .surface-elevated {
-  background-color: #161B26;
-  border: 1px solid #283248;
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.5);
+  background-color: #151B27;
+  border: 1px solid #28344D;
+  box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.6);
+}
+
+.surface-subtle {
+  background-color: #0A0E15;
+  border: 1px solid #161D2B;
 }
 
 .surface-interactive {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .surface-interactive:hover {
-  background-color: #151A24;
-  border-color: #2D374D;
-  transform: translateY(-1px);
+  background-color: #151C28;
+  border-color: #2D3D5E;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(45, 61, 94, 0.8);
+}
+
+/* Page Container Presets */
+.page-container {
+  min-height: 88vh;
+  padding: 3rem 1.25rem 5rem 1.25rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (min-width: 640px) {
+  .page-container {
+    padding: 3.5rem 2rem 6rem 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .page-container {
+    padding: 4rem 2.5rem 7rem 2.5rem;
+  }
 }
 
 /* Subtle architectural grid pattern */
 .bg-subtle-grid {
-  background-size: 32px 32px;
+  background-size: 36px 36px;
   background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #090C10;
+  background: #080B10;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1E2638;
+  background: #1C2538;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #2D374D;
+  background: #2D3D5E;
 }
 
 /* Motion accessibility */
